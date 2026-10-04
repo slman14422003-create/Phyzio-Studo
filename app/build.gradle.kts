@@ -155,5 +155,5 @@ dependencies {
     // ضمن إصدارات GitHub الرسمية، لذلك تُنزَّل تلقائيًا بالمهمة downloadSherpaOnnx أعلاه.
     implementation(files(sherpaAar).builtBy(downloadSherpaOnnx))
     // فكّ أرشيف النموذج (tar.bz2) أثناء التنزيل. الإصدار 1.21 بلا اعتماديات إضافية ويعمل على minSdk 24.
-    implementation("org.apache.commons:commons-compress:1.21")
+    implementation("org.apache.commons:commons-compress:1.28.0")
 }
