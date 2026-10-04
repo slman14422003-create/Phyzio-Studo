@@ -104,7 +104,7 @@ dependencies {
     implementation("com.tom-roush:pdfbox-android:2.0.27.0")
 
     // القراءة الصوتية بالأصوات العصبية المجانية (اتصال WebSocket في EdgeTtsClient)
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:okhttp:5.5.0")
 
     // التعرّف الضوئي على الحروف (Tesseract) لقراءة ملفات PDF الممسوحة ضوئيًا/المصوَّرة صوتيًا
     // (عربي + إنجليزي) - نموذج اللغة يُنزَّل مرة واحدة عند أول استخدام (PdfOcr).
