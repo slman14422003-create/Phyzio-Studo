@@ -16,6 +16,44 @@ if (file("google-services.json").exists()) {
 val ciRunNumber: Int? = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()
 val ciVersionName: String? = System.getenv("APP_VERSION_NAME")?.takeIf { it.isNotBlank() }
 
+// ---------------------------------------------------------------------------------------
+// sherpa-onnx (الصوت العصبي المحلي): تُنزَّل حزمة AAR الرسمية من إصدارات GitHub مرة واحدة
+// إلى app/libs (وتُتجاهَل في git). المهمة تعمل قبل البناء تلقائيًا ولا تُعيد التنزيل إن وُجد الملف.
+// ---------------------------------------------------------------------------------------
+val sherpaVersion = "1.13.4"
+val sherpaAar: java.io.File = layout.projectDirectory.file("libs/sherpa-onnx-$sherpaVersion.aar").asFile
+val downloadSherpaOnnx = tasks.register("downloadSherpaOnnx") {
+    outputs.file(sherpaAar)
+    onlyIf { !sherpaAar.exists() }
+    doLast {
+        val url = "https://github.com/k2-fsa/sherpa-onnx/releases/download/v$sherpaVersion/sherpa-onnx-$sherpaVersion.aar"
+        sherpaAar.parentFile.mkdirs()
+        val part = java.io.File(sherpaAar.parentFile, sherpaAar.name + ".part")
+        var lastError: Exception? = null
+        for (attempt in 1..3) {
+            try {
+                val conn = java.net.URI(url).toURL().openConnection()
+                conn.connectTimeout = 30_000
+                conn.readTimeout = 180_000
+                conn.getInputStream().use { input ->
+                    part.outputStream().use { output -> input.copyTo(output) }
+                }
+                if (part.length() < 1_000_000L) throw java.io.IOException("الملف المُنزَّل صغير جدًا (${part.length()} بايت)")
+                if (!part.renameTo(sherpaAar)) throw java.io.IOException("تعذّر نقل الملف المُنزَّل")
+                lastError = null
+                break
+            } catch (e: Exception) {
+                lastError = e
+                part.delete()
+                Thread.sleep(2000L * attempt)
+            }
+        }
+        if (lastError != null) {
+            throw GradleException("فشل تنزيل sherpa-onnx من $url", lastError)
+        }
+    }
+}
+
 android {
     namespace = "com.ast2012a.clinicalmaster"
     compileSdk = 36
@@ -112,9 +150,10 @@ dependencies {
 
     // الصوت العصبي المحلي (نموذج Piper العربي يعمل على الجهاز بلا إنترنت) - NeuralVoiceManager.
     // النموذج نفسه لا يدخل الـ APK: يُنزَّل مرة واحدة عند اختيار المحرك.
-    // ملاحظة: لو تعذّر على Gradle إيجاد هذا الإصدار، اختر أحدث إصدار منشور لـ
-    // com.k2fsa.sherpa.onnx:sherpa-onnx-android على Maven Central (الواجهة المستخدمة قديمة ومستقرة).
-    implementation("com.k2fsa.sherpa.onnx:sherpa-onnx-android:1.13.2")
+    // مهم: المكتبة غير منشورة على Maven Central ولا Google Maven (كان هذا سبب فشل البناء:
+    // "Could not find com.k2fsa.sherpa.onnx:sherpa-onnx-android"). تُنشر فقط كملف AAR
+    // ضمن إصدارات GitHub الرسمية، لذلك تُنزَّل تلقائيًا بالمهمة downloadSherpaOnnx أعلاه.
+    implementation(files(sherpaAar).builtBy(downloadSherpaOnnx))
     // فكّ أرشيف النموذج (tar.bz2) أثناء التنزيل. الإصدار 1.21 بلا اعتماديات إضافية ويعمل على minSdk 24.
     implementation("org.apache.commons:commons-compress:1.21")
 }

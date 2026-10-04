@@ -13,3 +13,6 @@ captures/
 # مفاتيح التوقيع - لا تُرفع أبدًا
 *.jks
 *.keystore
+
+# مكتبة sherpa-onnx تُنزَّل تلقائيًا أثناء البناء
+app/libs/*.aar
