@@ -1,3 +1,7 @@
+import java.io.File
+import java.io.IOException
+import java.net.URI
+
 plugins {
     id("com.android.application")
 }
@@ -21,25 +25,25 @@ val ciVersionName: String? = System.getenv("APP_VERSION_NAME")?.takeIf { it.isNo
 // إلى app/libs (وتُتجاهَل في git). المهمة تعمل قبل البناء تلقائيًا ولا تُعيد التنزيل إن وُجد الملف.
 // ---------------------------------------------------------------------------------------
 val sherpaVersion = "1.13.4"
-val sherpaAar: java.io.File = layout.projectDirectory.file("libs/sherpa-onnx-$sherpaVersion.aar").asFile
+val sherpaAar: File = layout.projectDirectory.file("libs/sherpa-onnx-$sherpaVersion.aar").asFile
 val downloadSherpaOnnx = tasks.register("downloadSherpaOnnx") {
     outputs.file(sherpaAar)
     onlyIf { !sherpaAar.exists() }
     doLast {
         val url = "https://github.com/k2-fsa/sherpa-onnx/releases/download/v$sherpaVersion/sherpa-onnx-$sherpaVersion.aar"
         sherpaAar.parentFile.mkdirs()
-        val part = java.io.File(sherpaAar.parentFile, sherpaAar.name + ".part")
+        val part = File(sherpaAar.parentFile, sherpaAar.name + ".part")
         var lastError: Exception? = null
         for (attempt in 1..3) {
             try {
-                val conn = java.net.URI(url).toURL().openConnection()
+                val conn = URI(url).toURL().openConnection()
                 conn.connectTimeout = 30_000
                 conn.readTimeout = 180_000
                 conn.getInputStream().use { input ->
                     part.outputStream().use { output -> input.copyTo(output) }
                 }
-                if (part.length() < 1_000_000L) throw java.io.IOException("الملف المُنزَّل صغير جدًا (${part.length()} بايت)")
-                if (!part.renameTo(sherpaAar)) throw java.io.IOException("تعذّر نقل الملف المُنزَّل")
+                if (part.length() < 1_000_000L) throw IOException("الملف المُنزَّل صغير جدًا (${part.length()} بايت)")
+                if (!part.renameTo(sherpaAar)) throw IOException("تعذّر نقل الملف المُنزَّل")
                 lastError = null
                 break
             } catch (e: Exception) {
