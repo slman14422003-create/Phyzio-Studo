@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- شاشة "الملفات السحابية": تخزين مجاني للـ PDF/المستندات عبر Cloudflare
+     Worker + R2 (رفع/فتح/إعادة تسمية/استبدال/حذف). راجع
+     cloudflare-worker/README.md في جذر المستودع لطريقة النشر. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_app_gradient"
+    android:orientation="vertical">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        style="@style/Phizyo.Toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        app:navigationIcon="@drawable/ic_arrow_back">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Phizyo.HeaderTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="الملفات السحابية" />
+
+            <TextView
+                android:id="@+id/header_subtitle"
+                style="@style/Phizyo.HeaderSubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
+        </LinearLayout>
+    </com.google.android.material.appbar.MaterialToolbar>
+
+    <!-- ملحوظة إصلاح: شريط التحميل وشريط الخطأ كانا داخل cloud_content، فلما تكون
+         الشاشة على حالة "غير مضبوط" (المحتوى مخفي) كان أي خطأ اتصال أو تحميل
+         بعد ضبط الرابط لا يظهر أبدًا فيبدو الزر/الشاشة "لا تعمل". نقلناهما خارجه. -->
+    <!-- شريط حالة الاتصال بالووركر (يظهر فقط عند خطأ أو أثناء التحميل) -->
+    <LinearLayout
+        android:id="@+id/cloud_status_row"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginEnd="16dp"
+        android:background="@drawable/bg_glass_card_warning"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_alert"
+            android:tint="@color/accent_red" />
+
+        <TextView
+            android:id="@+id/cloud_status_text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:textAlignment="viewStart"
+            android:textColor="@color/text_primary"
+            android:textDirection="rtl"
+            android:textSize="13.5sp" />
+    </LinearLayout>
+
+    <ProgressBar
+        android:id="@+id/cloud_progress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:indeterminate="true"
+        android:indeterminateTint="@color/primary_cyan"
+        android:visibility="gone" />
+
+
+    <!-- بطاقة الرفع (بأسلوب Claude): أيقونة الملف + الاسم + النسبة والحجم + شريط تقدّم
+         حقيقي + زر إلغاء. تتحول لحالة "تم الرفع" ثم تختفي تلقائيًا (يتحكم فيها
+         CloudStorageActivity). -->
+    <LinearLayout
+        android:id="@+id/upload_card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginEnd="16dp"
+        android:background="@drawable/bg_glass_card"
+        android:orientation="vertical"
+        android:padding="14dp"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <FrameLayout
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_avatar_circle">
+
+                <ImageView
+                    android:id="@+id/upload_icon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_folder"
+                    android:tint="@color/primary_cyan" />
+            </FrameLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/upload_name"
+                    style="@style/Phizyo.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="middle"
+                    android:maxLines="1"
+                    android:textDirection="firstStrong"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/upload_status"
+                    style="@style/Phizyo.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:textAlignment="viewStart"
+                    android:textSize="12.5sp" />
+            </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/upload_cancel"
+                style="@style/Phizyo.IconButton"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:contentDescription="إلغاء الرفع"
+                android:padding="8dp"
+                android:src="@drawable/ic_close" />
+        </LinearLayout>
+
+        <ProgressBar
+            android:id="@+id/upload_bar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="6dp"
+            android:layout_marginTop="12dp"
+            android:max="100"
+            android:progress="0"
+            android:progressDrawable="@drawable/bg_upload_progress" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:id="@+id/cloud_content"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/cloud_files_list"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:clipToPadding="false"
+                android:paddingStart="16dp"
+                android:paddingTop="14dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="100dp" />
+        </LinearLayout>
+
+        <include
+            android:id="@+id/empty_hint_container"
+            layout="@layout/view_empty_state"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="gone" />
+
+        <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+            android:id="@+id/fab_upload"
+            style="@style/Widget.Material3.ExtendedFloatingActionButton.Icon.Primary"
+            android:layout_width="wrap_content"
+            android:layout_height="52dp"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="20dp"
+            android:contentDescription="رفع ملف جديد"
+            android:text="رفع ملف"
+            android:textAllCaps="false"
+            android:textColor="@color/white"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            app:backgroundTint="@color/primary_cyan"
+            app:cornerRadius="26dp"
+            app:elevation="2dp"
+            app:icon="@drawable/ic_add"
+            app:iconTint="@color/white" />
+    </FrameLayout>
+</LinearLayout>

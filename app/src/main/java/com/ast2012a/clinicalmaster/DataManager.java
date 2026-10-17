@@ -1,0 +1,802 @@
+package com.ast2012a.clinicalmaster;
+
+import android.content.Context;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/**
+ * طبقة البيانات: تحميل قاعدة البيانات السريرية المدمجة مع التطبيق (أصول
+ * assets)، إدارة الحالات المخصصة (تُحفظ في ملف JSON داخل تخزين التطبيق
+ * الخاص)، ومحرك بحث مطابق تمامًا لخوارزمية البحث الأصلية (نفس الأوزان،
+ * نفس المرادفات، نفس التطابق الضبابي لتصحيح الأخطاء الإملائية).
+ */
+public class DataManager {
+
+    private static List<CaseItem> builtinCache;
+    private static List<JSONObject> modesCache;
+    private static List<JSONObject> anatomyCache;
+    private static List<JSONObject> userGuideCache;
+    // ملحوظة إصلاح "لاج" مربع البحث الرئيسي: allCases() كان يقرأ ملف
+    // custom_cases.json من القرص (فتح ملف + قراءة + تحليل JSON) في كل مرة،
+    // أي مع كل حرف يكتبه المستخدم في البحث، لأنه يعمل على UI thread. الحل:
+    // كاش بسيط بالذاكرة يُحدَّث فقط عند فعلي تغيير (إضافة/تعديل/حذف/مسح)،
+    // فبيقرأ القرص مرة واحدة فقط ثم يُعاد استخدامه.
+    private static List<CaseItem> customCasesCache;
+    // كاش تعديلات المستخدم على "الحالات الثابتة" (المدمجة من clinical_database.json):
+    // خريطة "عنوان الحالة الأصلي" -> JSONObject بالحقول المعدَّلة، محفوظة على القرص
+    // (case_overrides.json) ومُطبَّقة فوق القاعدة المدمجة عند كل loadBuiltinDatabase.
+    private static Map<String, JSONObject> overridesCache;
+
+    private static final String CUSTOM_FILE = "custom_cases.json";
+    private static final String OVERRIDES_FILE = "case_overrides.json";
+
+    // -----------------------------------------------------------------
+    // تحميل / حفظ
+    // -----------------------------------------------------------------
+
+    public static List<CaseItem> loadBuiltinDatabase(Context ctx) {
+        if (builtinCache != null) return builtinCache;
+        List<CaseItem> list = new ArrayList<>();
+        try {
+            String json = readAsset(ctx, "clinical_database.json");
+            JSONArray arr = new JSONArray(json);
+            for (int i = 0; i < arr.length(); i++) {
+                list.add(CaseItem.fromJson(arr.getJSONObject(i)));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        applyBuiltinOverrides(ctx, list);
+        builtinCache = list;
+        return builtinCache;
+    }
+
+    /** يستبدل أي حالة ثابتة (مدمجة) بنسختها المعدَّلة محليًا لو المستخدم عدّلها
+     *  من قبل، بدون المساس بملف clinical_database.json الأصلي داخل الـ assets. */
+    private static void applyBuiltinOverrides(Context ctx, List<CaseItem> list) {
+        Map<String, JSONObject> overrides = loadCaseOverridesRaw(ctx);
+        if (overrides.isEmpty()) return;
+        for (int i = 0; i < list.size(); i++) {
+            CaseItem original = list.get(i);
+            JSONObject ov = overrides.get(original.title);
+            if (ov == null) continue;
+            CaseItem merged = CaseItem.fromJson(ov);
+            merged.title = original.title; // العنوان هو مفتاح الربط، يبقى ثابتًا دائمًا
+            merged.custom = false;
+            merged.overridden = true;
+            list.set(i, merged);
+        }
+    }
+
+    public static List<JSONObject> loadModesEncyclopedia(Context ctx) {
+        if (modesCache != null) return modesCache;
+        modesCache = new ArrayList<>();
+        try {
+            String json = readAsset(ctx, "modes_encyclopedia.json");
+            JSONArray arr = new JSONArray(json);
+            for (int i = 0; i < arr.length(); i++) {
+                modesCache.add(arr.getJSONObject(i));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return modesCache;
+    }
+
+    /** يحمّل مرجع التشريح (المسارات العصبية/العضلية ومواضع الأقطاب) - دليل
+     *  ذاتي بالكامل داخل التطبيق (assets)، بدون الحاجة لاتصال إنترنت. */
+    public static List<JSONObject> loadAnatomyReference(Context ctx) {
+        if (anatomyCache != null) return anatomyCache;
+        anatomyCache = new ArrayList<>();
+        try {
+            String json = readAsset(ctx, "anatomy_reference.json");
+            JSONArray arr = new JSONArray(json);
+            for (int i = 0; i < arr.length(); i++) {
+                anatomyCache.add(arr.getJSONObject(i));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return anatomyCache;
+    }
+
+    /** يحمّل دليل استخدام الجهاز (مبني من دليل المستخدم الرسمي AST-2012A) -
+     *  مرجع ذاتي بالكامل داخل التطبيق (assets)، بدون الحاجة لاتصال إنترنت. */
+    public static List<JSONObject> loadUserGuide(Context ctx) {
+        if (userGuideCache != null) return userGuideCache;
+        userGuideCache = new ArrayList<>();
+        try {
+            String json = readAsset(ctx, "user_guide.json");
+            JSONArray arr = new JSONArray(json);
+            for (int i = 0; i < arr.length(); i++) {
+                userGuideCache.add(arr.getJSONObject(i));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return userGuideCache;
+    }
+
+    private static String readAsset(Context ctx, String name) throws IOException {
+        InputStream is = ctx.getAssets().open(name);
+        BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
+        StringBuilder sb = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) sb.append(line).append('\n');
+        reader.close();
+        return sb.toString();
+    }
+
+    private static File customFile(Context ctx) {
+        return new File(ctx.getFilesDir(), CUSTOM_FILE);
+    }
+
+    public static List<CaseItem> loadCustomCases(Context ctx) {
+        if (customCasesCache != null) return customCasesCache;
+        List<CaseItem> list = new ArrayList<>();
+        File f = customFile(ctx);
+        if (!f.exists()) {
+            customCasesCache = list;
+            return list;
+        }
+        try {
+            StringBuilder sb = new StringBuilder();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(
+                    ctx.openFileInput(CUSTOM_FILE), StandardCharsets.UTF_8));
+            String line;
+            while ((line = reader.readLine()) != null) sb.append(line);
+            reader.close();
+            JSONArray arr = new JSONArray(sb.toString());
+            for (int i = 0; i < arr.length(); i++) {
+                list.add(CaseItem.fromJson(arr.getJSONObject(i)));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        customCasesCache = list;
+        return list;
+    }
+
+    public static void saveCustomCases(Context ctx, List<CaseItem> cases) {
+        try {
+            JSONArray arr = new JSONArray();
+            for (CaseItem c : cases) arr.put(c.toJson());
+            FileOutputStream fos = ctx.openFileOutput(CUSTOM_FILE, Context.MODE_PRIVATE);
+            fos.write(arr.toString(2).getBytes(StandardCharsets.UTF_8));
+            fos.close();
+            customCasesCache = new ArrayList<>(cases);
+        } catch (IOException | JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static List<CaseItem> allCases(Context ctx) {
+        List<CaseItem> all = new ArrayList<>(loadBuiltinDatabase(ctx));
+        all.addAll(loadCustomCases(ctx));
+        return all;
+    }
+
+    // -----------------------------------------------------------------
+    // إدارة الحالات المخصصة (إضافة / تعديل / حذف)
+    // -----------------------------------------------------------------
+
+    public static CaseItem addCustomCase(Context ctx, CaseItem fields) {
+        List<CaseItem> cases = loadCustomCases(ctx);
+        fields.id = UUID.randomUUID().toString().substring(0, 12);
+        fields.custom = true;
+        cases.add(fields);
+        saveCustomCases(ctx, cases);
+        return fields;
+    }
+
+    public static CaseItem updateCustomCase(Context ctx, String id, CaseItem fields) {
+        List<CaseItem> cases = loadCustomCases(ctx);
+        for (int i = 0; i < cases.size(); i++) {
+            if (id.equals(cases.get(i).id)) {
+                fields.id = id;
+                fields.custom = true;
+                cases.set(i, fields);
+                saveCustomCases(ctx, cases);
+                return fields;
+            }
+        }
+        return null;
+    }
+
+    public static void deleteCustomCase(Context ctx, String id) {
+        List<CaseItem> cases = loadCustomCases(ctx);
+        List<CaseItem> filtered = new ArrayList<>();
+        for (CaseItem c : cases) if (!id.equals(c.id)) filtered.add(c);
+        saveCustomCases(ctx, filtered);
+    }
+
+    public static void clearAllCustomCases(Context ctx) {
+        saveCustomCases(ctx, new ArrayList<>());
+    }
+
+    // -----------------------------------------------------------------
+    // تعديل "الحالات الثابتة" (المدمجة من clinical_database.json): بعكس
+    // الحالات المخصصة، هذه لا تُحفظ كملف مستقل بل كـ"تعديلات" (overrides)
+    // فوق النسخة الأصلية المدمجة مع التطبيق - نص الدليل الرسمي الأصلي يبقى
+    // سليمًا دائمًا، والمستخدم يقدر يستعيده وقتما شاء (لحالة واحدة أو للكل
+    // معًا) من شاشة تفاصيل الحالة أو من الإعدادات ← "الحالات الأساسية المعدَّلة".
+    // -----------------------------------------------------------------
+
+    public static Map<String, JSONObject> loadCaseOverridesRaw(Context ctx) {
+        if (overridesCache != null) return overridesCache;
+        Map<String, JSONObject> map = new HashMap<>();
+        File f = new File(ctx.getFilesDir(), OVERRIDES_FILE);
+        if (f.exists()) {
+            try {
+                StringBuilder sb = new StringBuilder();
+                BufferedReader reader = new BufferedReader(new InputStreamReader(
+                        ctx.openFileInput(OVERRIDES_FILE), StandardCharsets.UTF_8));
+                String line;
+                while ((line = reader.readLine()) != null) sb.append(line);
+                reader.close();
+                JSONObject obj = new JSONObject(sb.toString());
+                Iterator<String> keys = obj.keys();
+                while (keys.hasNext()) {
+                    String key = keys.next();
+                    map.put(key, obj.getJSONObject(key));
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        overridesCache = map;
+        return overridesCache;
+    }
+
+    private static void saveCaseOverridesRaw(Context ctx, Map<String, JSONObject> map) {
+        try {
+            JSONObject obj = new JSONObject();
+            for (Map.Entry<String, JSONObject> e : map.entrySet()) obj.put(e.getKey(), e.getValue());
+            FileOutputStream fos = ctx.openFileOutput(OVERRIDES_FILE, Context.MODE_PRIVATE);
+            fos.write(obj.toString(2).getBytes(StandardCharsets.UTF_8));
+            fos.close();
+            overridesCache = new HashMap<>(map);
+        } catch (IOException | JSONException e) {
+            e.printStackTrace();
+        }
+        builtinCache = null; // إجبار loadBuiltinDatabase على إعادة الدمج في المرة القادمة
+    }
+
+    /** يحفظ تعديل المستخدم على حالة ثابتة (originalTitle هو مفتاح الربط، لا يتغيّر أبدًا). */
+    public static void saveBuiltinCaseOverride(Context ctx, String originalTitle, CaseItem fields) {
+        Map<String, JSONObject> map = new HashMap<>(loadCaseOverridesRaw(ctx));
+        try {
+            fields.title = originalTitle;
+            fields.custom = false;
+            fields.overridden = true;
+            map.put(originalTitle, fields.toJson());
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        saveCaseOverridesRaw(ctx, map);
+    }
+
+    /** يتراجع عن تعديل حالة ثابتة واحدة، ويعيدها لنص دليل الجهاز الأصلي. */
+    public static void resetBuiltinCaseOverride(Context ctx, String originalTitle) {
+        Map<String, JSONObject> map = new HashMap<>(loadCaseOverridesRaw(ctx));
+        map.remove(originalTitle);
+        saveCaseOverridesRaw(ctx, map);
+    }
+
+    /** يتراجع عن كل تعديلات الحالات الثابتة دفعة واحدة. */
+    public static void resetAllBuiltinOverrides(Context ctx) {
+        saveCaseOverridesRaw(ctx, new HashMap<>());
+    }
+
+    public static int countBuiltinOverrides(Context ctx) {
+        return loadCaseOverridesRaw(ctx).size();
+    }
+
+    public static List<String> listOverriddenTitles(Context ctx) {
+        return new ArrayList<>(loadCaseOverridesRaw(ctx).keySet());
+    }
+
+    // -----------------------------------------------------------------
+    // محرك البحث (منقول بالكامل من منطق JS الأصلي في التطبيق)
+    // -----------------------------------------------------------------
+
+    private static final Map<String, String[]> SYNONYMS = new HashMap<>();
+    static {
+        SYNONYMS.put("خشونه", new String[]{"التهاب المفصل", "استيوارثرايتس", "osteoarthritis", "oa"});
+        SYNONYMS.put("الركبه", new String[]{"ركبه", "knee"});
+        SYNONYMS.put("الرقبه", new String[]{"رقبه", "عنق", "neck", "cervical"});
+        SYNONYMS.put("الظهر", new String[]{"ظهر", "عمود فقري", "back", "spine"});
+        SYNONYMS.put("الكتف", new String[]{"كتف", "shoulder"});
+        SYNONYMS.put("عرق النسا", new String[]{"نسا", "sciatica", "وجع النسا"});
+        SYNONYMS.put("انزلاق غضروفي", new String[]{"ديسك", "disc", "غضروف"});
+        SYNONYMS.put("شلل", new String[]{"فالج", "paralysis", "palsy"});
+        SYNONYMS.put("جلطه", new String[]{"سكته دماغيه", "stroke", "cva"});
+        SYNONYMS.put("تنميل", new String[]{"خدر", "numbness", "tingling"});
+        SYNONYMS.put("الم", new String[]{"وجع", "الآم", "pain", "وجعا"});
+        SYNONYMS.put("تورم", new String[]{"انتفاخ", "swelling", "edema"});
+        SYNONYMS.put("تشنج", new String[]{"تقلص", "spasm", "cramp"});
+        SYNONYMS.put("ضعف", new String[]{"ضمور", "weakness", "atrophy"});
+        SYNONYMS.put("التهاب", new String[]{"الم مزمن", "inflammation", "itis"});
+        SYNONYMS.put("كسر", new String[]{"فراكشر", "fracture"});
+        SYNONYMS.put("سكري", new String[]{"سكر", "diabetes", "diabetic"});
+        SYNONYMS.put("بعد الولاده", new String[]{"نفاس", "postpartum", "postnatal"});
+        SYNONYMS.put("الكوع", new String[]{"مرفق", "elbow", "تنس البو"});
+        SYNONYMS.put("القدم", new String[]{"كف القدم", "foot"});
+        SYNONYMS.put("الكاحل", new String[]{"ankle", "التواء"});
+        SYNONYMS.put("الفخذ", new String[]{"thigh", "hip femoral"});
+        SYNONYMS.put("الورك", new String[]{"مفصل الحوض", "hip"});
+        SYNONYMS.put("شد عضلي", new String[]{"تمزق عضلي", "muscle strain", "شد"});
+        SYNONYMS.put("الصداع", new String[]{"صداع", "headache", "شقيقه"});
+        SYNONYMS.put("الدوالي", new String[]{"دوالي", "varicose"});
+        SYNONYMS.put("تيبس", new String[]{"تصلب", "stiffness"});
+        SYNONYMS.put("استرخاء", new String[]{"استرخاء عضلي", "relaxation"});
+        SYNONYMS.put("دوره دمويه", new String[]{"الدوره الدمويه", "circulation", "تروية"});
+        SYNONYMS.put("اصبع الزناد", new String[]{"إصبع الزناد", "trigger finger", "تيبس اصبع"});
+        SYNONYMS.put("دي كيرفان", new String[]{"de quervain", "التهاب غمد الوتر", "الم قاعدة الابهام"});
+        SYNONYMS.put("كوع لاعب الغولف", new String[]{"golfer's elbow", "التهاب اللقيمة الانسية", "الم داخل المرفق"});
+        SYNONYMS.put("اخيل", new String[]{"وتر اخيل", "achilles", "العرقوب", "خلف الكاحل"});
+        SYNONYMS.put("مثلث التوائم", new String[]{"trigeminal neuralgia", "الم الوجه الحاد"});
+        SYNONYMS.put("الغضروف الضلعي", new String[]{"costochondritis", "الم الصدر العضلي", "القفص الصدري"});
+        SYNONYMS.put("العجزي الحرقفي", new String[]{"sacroiliac", "si joint", "اسفل الظهر الجانبي"});
+        SYNONYMS.put("صداع الرقبه", new String[]{"cervicogenic headache", "صداع خلف الراس"});
+        SYNONYMS.put("الفخذ الجانبي", new String[]{"meralgia paresthetica", "تنميل الفخذ الخارجي"});
+        SYNONYMS.put("تململ الساقين", new String[]{"restless legs", "حركة الساق اللاإرادية"});
+        SYNONYMS.put("الرسغ", new String[]{"المعصم", "wrist", "النفق الرسغي", "carpal tunnel"});
+        SYNONYMS.put("قاع الحوض", new String[]{"pelvic floor", "عضلات الحوض"});
+        SYNONYMS.put("رباعية الرؤوس", new String[]{"quadriceps", "الفخذ الامامي"});
+        // إصلاح "ما يقدر يجاوب عن تيارات الجهاز": مرادفات "تيار" بمختلف
+        // صياغاتها الشائعة (سؤال عن نوع/أنواع تيار الجهاز، أو بالإنجليزي)
+        // عشان أي صياغة قريبة توصل لنفس مقال دليل التيارات في القاعدة حتى
+        // لو مش مطابقة حرفيًا لأي كلمة مفتاحية مُدرجة فيه.
+        SYNONYMS.put("تيار", new String[]{"تيارات", "التيار", "التيارات", "current",
+                "electrical current", "نوع التيار", "انواع التيار", "الموجة الكهربائية"});
+    }
+
+    public static String normalize(String text) {
+        if (text == null) return "";
+        text = text.toLowerCase();
+        text = text.replaceAll("[أإآ]", "ا");
+        text = text.replace('ة', 'ه');
+        text = text.replace('ى', 'ي');
+        return text;
+    }
+
+    /** كانت private - بقت مرئية على مستوى الحزمة (Package-private) عشان
+     *  CloudKnowledgeManager يقدر يستخدم نفس منطق المرادفات الطبية/العلاجية
+     *  ده في بحث مستندات السحابة كمان، بدل ما يفضل بحث تطابق نصي بسيط بلا
+     *  وعي بالمرادفات - نفس محرك البحث في كل أنحاء التطبيق. */
+    static Set<String> expandWithSynonyms(String term) {
+        Set<String> expanded = new HashSet<>();
+        expanded.add(term);
+        for (Map.Entry<String, String[]> e : SYNONYMS.entrySet()) {
+            String key = e.getKey();
+            if (key.contains(term) || term.contains(key)) {
+                expanded.add(key);
+                for (String s : e.getValue()) expanded.add(s);
+            }
+            for (String s : e.getValue()) {
+                if (s.contains(term) || term.contains(s)) {
+                    expanded.add(key);
+                    for (String s2 : e.getValue()) expanded.add(s2);
+                }
+            }
+        }
+        return expanded;
+    }
+
+    private static int levenshtein(String a, String b) {
+        if (a.equals(b)) return 0;
+        int al = a.length(), bl = b.length();
+        if (al == 0) return bl;
+        if (bl == 0) return al;
+        int[][] dp = new int[al + 1][bl + 1];
+        for (int i = 0; i <= al; i++) dp[i][0] = i;
+        for (int j = 0; j <= bl; j++) dp[0][j] = j;
+        for (int i = 1; i <= al; i++) {
+            for (int j = 1; j <= bl; j++) {
+                int cost = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
+                dp[i][j] = Math.min(Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1), dp[i - 1][j - 1] + cost);
+            }
+        }
+        return dp[al][bl];
+    }
+
+    private static boolean fuzzyIncludes(String[] haystackWords, String term) {
+        if (term.length() <= 3) return false;
+        int maxDist = term.length() > 6 ? 2 : 1;
+        for (String w : haystackWords) {
+            if (Math.abs(w.length() - term.length()) <= maxDist && levenshtein(w, term) <= maxDist) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static List<String> getGeneralSafetyNote(String modeStr) {
+        List<String> notes = new ArrayList<>();
+        if (modeStr == null) modeStr = "";
+        boolean isEms = modeStr.contains("EMS");
+        boolean isTens = modeStr.contains("TENS");
+        if (isEms || isTens) {
+            notes.add("لا يُستخدم فوق منظم ضربات القلب (Pacemaker) أو أي جهاز كهربائي مزروع.");
+            notes.add("يُمنع وضع الأقطاب على الجزء الأمامي من الرقبة (الجيب السباتي) أو الصدر بشكل متقاطع، أو منطقة الرأس والعينين.");
+            notes.add("يُمنع الاستخدام فوق الجروح المفتوحة، الجلد المصاب، أو مناطق الأورام، أو أثناء الحمل فوق منطقة البطن والحوض دون استشارة.");
+        }
+        if (isEms) {
+            notes.add("EMS يُحدث انقباضاً عضلياً فعلياً؛ ابدأ بشدة منخفضة وزدها تدريجياً حسب تحمل المريض.");
+        }
+        return notes;
+    }
+
+    private static class Scored {
+        CaseItem item;
+        int score;
+        int matchedTerms;
+    }
+
+    private static Scored scoreItem(CaseItem item, String rawKeyword, String[] rawTerms, Set<String> favoriteTitles) {
+        String normTitle = normalize(item.title);
+        String normMode = normalize(item.mode);
+        String normExplanation = normalize(item.explanation);
+        String normSymptoms = normalize(item.symptoms);
+        String normTip = normalize(item.tip);
+        String normFreq = normalize(item.freq);
+        String normChannel = normalize(item.channel);
+        String normDuration = normalize(item.duration);
+        String normSessionsPlan = normalize(item.sessionsPlan);
+        List<String> normKeywords = new ArrayList<>();
+        for (String k : item.keywords) normKeywords.add(normalize(k));
+        String[] titleWords = normTitle.split("\\s+");
+        List<String> keywordWordsList = new ArrayList<>();
+        for (String k : normKeywords) for (String w : k.split("\\s+")) keywordWordsList.add(w);
+        String[] keywordWords = keywordWordsList.toArray(new String[0]);
+
+        int score = 0;
+        int matchedTerms = 0;
+
+        if (normKeywords.contains(rawKeyword)) score += 1000;
+
+        for (String rawTerm : rawTerms) {
+            Set<String> variants = new HashSet<>();
+            for (String v : expandWithSynonyms(rawTerm)) variants.add(normalize(v));
+
+            boolean termMatched = false;
+            for (String term : variants) {
+                boolean inKeywords = false;
+                for (String k : normKeywords) if (k.contains(term)) { inKeywords = true; break; }
+                if (inKeywords) { score += 50; termMatched = true; }
+                if (normTitle.contains(term)) { score += 20; termMatched = true; }
+                if (normMode.contains(term)) { score += 10; termMatched = true; }
+                if (normSymptoms.contains(term)) { score += 8; termMatched = true; }
+                if (normExplanation.contains(term)) { score += 3; termMatched = true; }
+                if (normTip.contains(term)) { score += 3; termMatched = true; }
+                if (normSessionsPlan.contains(term)) { score += 2; termMatched = true; }
+                if (normFreq.contains(term)) { score += 2; termMatched = true; }
+                if (normChannel.contains(term)) { score += 2; termMatched = true; }
+                if (normDuration.contains(term)) { score += 2; termMatched = true; }
+            }
+            if (!termMatched) {
+                if (fuzzyIncludes(keywordWords, rawTerm)) { score += 25; termMatched = true; }
+                else if (fuzzyIncludes(titleWords, rawTerm)) { score += 12; termMatched = true; }
+            }
+            if (termMatched) matchedTerms++;
+        }
+
+        // تحسين ذكاء البحث: تعزيز إضافي لو العبارة الكاملة اللي كتبها
+        // المستخدم (مش كلمة بمفردها) موجودة حرفيًا في العنوان أو ضمن إحدى
+        // الكلمات المفتاحية - ده بيرفع الحالة الأدق دلاليًا لأعلى النتائج
+        // حتى لو حالات تانية جمعت نفس عدد الكلمات المطابقة بالمصادفة.
+        if (rawKeyword.length() > 2) {
+            if (normTitle.contains(rawKeyword)) score += 40;
+            for (String k : normKeywords) {
+                if (k.contains(rawKeyword)) { score += 30; break; }
+            }
+        }
+
+        // تعزيز بسيط للحالات المفضّلة عند المستخدم - تظهر أولًا عند تساوي درجة
+        // التطابق مع حالات أخرى، دون أن تفسد ترتيب التطابق الدقيق نفسه.
+        if (favoriteTitles != null && favoriteTitles.contains(item.title) && score > 0) {
+            score += 4;
+        }
+
+        Scored s = new Scored();
+        s.item = item;
+        s.score = score;
+        s.matchedTerms = matchedTerms;
+        return s;
+    }
+
+    public static class SearchResult {
+        public List<CaseItem> items;
+        public boolean isFallback;
+        /** أقرب عنوان في قاعدة البيانات لو مفيش أي نتيجة على الإطلاق - "هل تقصد؟" */
+        public String closestTitleSuggestion;
+    }
+
+    public static SearchResult search(String rawKeyword, List<CaseItem> cases) {
+        return search(rawKeyword, cases, null);
+    }
+
+    public static SearchResult search(String rawKeyword, List<CaseItem> cases, Set<String> favoriteTitles) {
+        SearchResult result = new SearchResult();
+        result.items = new ArrayList<>();
+        result.isFallback = false;
+
+        if (rawKeyword == null || rawKeyword.trim().isEmpty()) return result;
+
+        String normalizedKeyword = normalize(rawKeyword.trim());
+        String[] rawTerms = normalizedKeyword.split("\\s+");
+        List<String> termsList = new ArrayList<>();
+        for (String t : rawTerms) if (t.length() > 1) termsList.add(t);
+        if (termsList.isEmpty()) termsList.add(normalizedKeyword);
+        String[] terms = termsList.toArray(new String[0]);
+
+        List<Scored> scored = new ArrayList<>();
+        for (CaseItem item : cases) scored.add(scoreItem(item, normalizedKeyword, terms, favoriteTitles));
+
+        List<Scored> candidates = new ArrayList<>();
+        for (Scored s : scored) if (s.matchedTerms == terms.length && s.score > 0) candidates.add(s);
+
+        if (candidates.isEmpty()) {
+            result.isFallback = true;
+            int minTermsCovered = Math.max(1, (int) Math.ceil(terms.length * 0.6));
+            for (Scored s : scored) if (s.matchedTerms >= minTermsCovered && s.score >= 15) candidates.add(s);
+        }
+
+        candidates.sort((a, b) -> b.score - a.score);
+
+        if (candidates.isEmpty()) {
+            result.closestTitleSuggestion = findClosestTitle(normalizedKeyword, cases);
+            return result;
+        }
+
+        int topScore = candidates.get(0).score;
+        for (Scored s : candidates) if (s.score == topScore) result.items.add(s.item);
+        return result;
+    }
+
+    /**
+     * لو محرك البحث مش لاقي أي تطابق نهائيًا، نبحث عن أقرب عنوان في القاعدة
+     * بمسافة Levenshtein (على مستوى الكلمات) عشان نقترح "هل تقصد؟" بدل ما
+     * نسيب المستخدم بشاشة فاضية بدون أي توجيه.
+     */
+    private static String findClosestTitle(String normalizedKeyword, List<CaseItem> cases) {
+        String bestTitle = null;
+        int bestDist = Integer.MAX_VALUE;
+        for (CaseItem item : cases) {
+            String normTitle = normalize(item.title);
+            for (String word : normTitle.split("\\s+")) {
+                if (word.length() < 3) continue;
+                int dist = levenshtein(word, normalizedKeyword);
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    bestTitle = item.title;
+                }
+            }
+            for (String kw : item.keywords) {
+                String normKw = normalize(kw);
+                int dist = levenshtein(normKw, normalizedKeyword);
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    bestTitle = item.title;
+                }
+            }
+        }
+        // لا نقترح لو الفرق كبير جدًا (يبقى مش قريب فعلًا، اقتراح مضلل)
+        if (bestTitle != null && bestDist <= Math.max(2, normalizedKeyword.length() / 2)) {
+            return bestTitle;
+        }
+        return null;
+    }
+
+    public static String extractEnglishTerm(String title) {
+        if (title == null) return null;
+        Pattern p = Pattern.compile("\\(([^)]+)\\)\\s*$");
+        Matcher m = p.matcher(title);
+        if (m.find()) return m.group(1);
+        return null;
+    }
+
+    // -----------------------------------------------------------------
+    // "التأريض" (Grounding): تزويد المساعد الذكي بالبروتوكولات الموثقة ذات
+    // الصلة من قاعدة بيانات الجهاز الرسمية، ليقارن إجابته معها بدل الاعتماد
+    // على معرفته العامة فقط - يقلل الهلوسة ويحافظ على الاتساق مع الجهاز.
+    // -----------------------------------------------------------------
+
+    // -----------------------------------------------------------------
+    // إجابة محلية موثوقة 100%: لما البحث يلاقي تطابقًا مباشرًا وواضحًا في
+    // قاعدة بيانات الجهاز، بنبني رد منسّق كامل من بيانات الحالة نفسها -
+    // فوري، بدون إنترنت، بدون أي استدعاء لأي نموذج ذكاء اصطناعي خارجي،
+    // وبالتالي مضمون الدقة 100% لأنه منقول حرفيًا من القاعدة الموثقة.
+    // -----------------------------------------------------------------
+
+    public static String buildLocalAnswer(CaseItem c) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("🩺 ").append(c.title).append("\n\n");
+        sb.append("• النمط: ").append(nz(c.mode)).append("\n");
+        if (!nz(c.freq).isEmpty()) sb.append("• التردد: ").append(c.freq).append("\n");
+        if (!nz(c.channel).isEmpty()) sb.append("• القناة: ").append(c.channel).append("\n");
+        if (!nz(c.duration).isEmpty()) sb.append("• المدة: ").append(c.duration).append("\n");
+        if (c.poles != null && !c.poles.isEmpty()) {
+            sb.append("• الأقطاب: ").append(String.join("، ", c.poles)).append("\n");
+        }
+        if (!nz(c.symptoms).isEmpty()) {
+            sb.append("\n📌 الأعراض المرتبطة:\n").append(c.symptoms).append("\n");
+        }
+        if (!nz(c.explanation).isEmpty()) {
+            sb.append("\n📋 الشرح السريري:\n").append(c.explanation).append("\n");
+        }
+        if (!nz(c.sessionsPlan).isEmpty()) {
+            sb.append("\n🗓️ خطة الجلسات المقترحة:\n").append(c.sessionsPlan).append("\n");
+        }
+        if (!nz(c.tip).isEmpty()) {
+            sb.append("\n💡 ملاحظة عملية:\n").append(c.tip).append("\n");
+        }
+        List<String> notes = getGeneralSafetyNote(c.mode);
+        if (!notes.isEmpty()) {
+            sb.append("\n⚠️ تنبيهات السلامة:\n");
+            for (String n : notes) sb.append("• ").append(n).append("\n");
+        }
+        return sb.toString().trim();
+    }
+
+    private static String nz(String s) { return s == null ? "" : s; }
+
+    public static class GroundingResult {
+        public String contextText;
+        public int caseCount;
+    }
+
+    /**
+     * إصلاح مهم (وصول المساعد الذكي لملفات ناقص): كانت بتأرض بس من
+     * loadBuiltinDatabase (131 بروتوكول المدمجة مع التطبيق)، من غير أي
+     * وعي بـ"الحالات" المخصّصة اللي المستخدم أضافها بنفسه من شاشة "حالاتي"
+     * (MyCasesActivity/AddEditCaseActivity) - فكان المساعد يجاوب وكأن
+     * حالات المستخدم دي مش موجودة أصلًا. دلوقتي بتستخدم allCases(ctx)
+     * (المدمجة + المخصّصة مع بعض) عشان أي حالة أضافها المستخدم بنفسه
+     * تبقى فعليًا مصدر تأريض زي أي بروتوكول رسمي بالظبط.
+     */
+    public static GroundingResult buildGroundingContext(Context ctx, String userQuery, int maxCases) {
+        List<CaseItem> all = allCases(ctx);
+        SearchResult result = search(userQuery, all);
+        if (result.items.isEmpty()) return null;
+
+        GroundingResult g = new GroundingResult();
+        int count = Math.min(maxCases, result.items.size());
+        g.caseCount = count;
+
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < count; i++) {
+            CaseItem c = result.items.get(i);
+            sb.append("• ").append(c.title)
+              .append(" | النمط: ").append(c.mode)
+              .append(" | التردد: ").append(c.freq)
+              .append(" | القناة: ").append(c.channel)
+              .append(" | المدة: ").append(c.duration);
+            if (c.explanation != null && !c.explanation.isEmpty()) {
+                sb.append(" | الشرح السريري: ").append(c.explanation);
+            }
+            if (c.sessionsPlan != null && !c.sessionsPlan.isEmpty()) {
+                sb.append(" | خطة الجلسات الموصى بها: ").append(c.sessionsPlan);
+            }
+            sb.append("\n");
+        }
+        g.contextText = sb.toString();
+        return g;
+    }
+
+    // -----------------------------------------------------------------
+    // تأريض موسوعة الأنماط + دليل التشريح: المساعد الذكي كان له حق الوصول
+    // لقاعدة بيانات البروتوكولات فقط (buildGroundingContext أعلاه)، بدون
+    // موسوعة الأنماط (modes_encyclopedia.json) ولا مرجع التشريح
+    // (anatomy_reference.json) - رغم إنهم جزء أساسي من معرفة التطبيق
+    // الموثقة. الاثنين صغيرا الحجم (عدد محدود من العناصر)، فبدل محرك
+    // بحث/تطابق إضافي معقّد، بنرفقهم بالكامل كخلفية معرفية مضغوطة مع أي
+    // سؤال إكلينيكي (مسار SEARCH فقط) - يضمن إن المساعد "يعرف" محتوى
+    // الموسوعة والتشريح دايمًا بدل ما يعتمد على تخمين عام.
+    // -----------------------------------------------------------------
+
+    public static String buildEncyclopediaContext(Context ctx) {
+        StringBuilder sb = new StringBuilder();
+
+        List<JSONObject> modes = loadModesEncyclopedia(ctx);
+        if (!modes.isEmpty()) {
+            sb.append("موسوعة أنماط الجهاز (مرجع موثّق داخل التطبيق):\n");
+            for (JSONObject m : modes) {
+                String name = m.optString("name", m.optString("title", ""));
+                String range = m.optString("mode", "");
+                String desc = m.optString("desc", m.optString("description", ""));
+                sb.append("• ").append(name);
+                if (!range.isEmpty()) sb.append(" (النمط: ").append(range).append(")");
+                if (!desc.isEmpty()) sb.append(" — ").append(desc);
+                sb.append("\n");
+            }
+        }
+
+        List<JSONObject> anatomy = loadAnatomyReference(ctx);
+        if (!anatomy.isEmpty()) {
+            sb.append("\nدليل التشريح (مواضع الأقطاب والمسارات العصبية/العضلية، مرجع موثّق داخل التطبيق):\n");
+            for (JSONObject a : anatomy) {
+                String region = a.optString("region", "");
+                String name = a.optString("name", "");
+                String nerve = a.optString("nerve", "");
+                String landmarks = a.optString("landmarks", "");
+                String notes = a.optString("notes", "");
+                sb.append("• ").append(name);
+                if (!region.isEmpty()) sb.append(" [").append(region).append("]");
+                if (!nerve.isEmpty()) sb.append(" — العصب: ").append(nerve);
+                if (!landmarks.isEmpty()) sb.append(" — مواضع الأقطاب: ").append(landmarks);
+                if (!notes.isEmpty()) sb.append(" — تنبيه: ").append(notes);
+                sb.append("\n");
+            }
+        }
+
+        return sb.length() == 0 ? null : sb.toString().trim();
+    }
+
+    // -----------------------------------------------------------------
+    // ربط موسوعة الأنماط بقاعدة الحالات الفعلية: نستخرج أرقام الأنماط من
+    // نص الموسوعة (مثال: "1 إلى 4" أو "10 و 11")، ونعدّ كم حالة سريرية
+    // موثقة فعليًا تستخدم أي من هذه الأنماط - بيانات حقيقية من القاعدة
+    // نفسها، مش أرقام مُختلقة.
+    // -----------------------------------------------------------------
+
+    public static Set<Integer> parseModeNumbers(String rangeText) {
+        Set<Integer> numbers = new HashSet<>();
+        if (rangeText == null) return numbers;
+
+        Matcher rangeMatcher = Pattern.compile("(\\d+)\\s*(?:إلى|-|to)\\s*(\\d+)").matcher(rangeText);
+        if (rangeMatcher.find()) {
+            int start = Integer.parseInt(rangeMatcher.group(1));
+            int end = Integer.parseInt(rangeMatcher.group(2));
+            for (int i = start; i <= end; i++) numbers.add(i);
+            return numbers;
+        }
+
+        Matcher singleMatcher = Pattern.compile("\\d+").matcher(rangeText);
+        while (singleMatcher.find()) {
+            numbers.add(Integer.parseInt(singleMatcher.group()));
+        }
+        return numbers;
+    }
+
+    private static Set<Integer> extractModeNumbersFromCase(String caseMode) {
+        Set<Integer> numbers = new HashSet<>();
+        if (caseMode == null) return numbers;
+        Matcher m = Pattern.compile("النمط\\s*(\\d+)").matcher(caseMode);
+        while (m.find()) numbers.add(Integer.parseInt(m.group(1)));
+        return numbers;
+    }
+
+    public static int countCasesForModeNumbers(Context ctx, Set<Integer> modeNumbers) {
+        if (modeNumbers.isEmpty()) return 0;
+        int count = 0;
+        for (CaseItem c : loadBuiltinDatabase(ctx)) {
+            Set<Integer> caseNumbers = extractModeNumbersFromCase(c.mode);
+            caseNumbers.retainAll(modeNumbers);
+            if (!caseNumbers.isEmpty()) count++;
+        }
+        return count;
+    }
+}
