@@ -159,7 +159,7 @@ final class AudioEnvelope {
                 && d[8] == 'W' && d[9] == 'A' && d[10] == 'V' && d[11] == 'E';
     }
 
-    /** غلاف الصوت من WAV أحادي 16 بت (يُنتجه LocalSpeechEngine). null لو الصيغة غير مدعومة. */
+    /** غلاف الصوت من WAV أحادي 16 بت (يُنتجه NeuralVoiceManager). null لو الصيغة غير مدعومة. */
     private static float[] fromWav(byte[] d) {
         try {
             int channels = (d[22] & 0xFF) | ((d[23] & 0xFF) << 8);

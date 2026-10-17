@@ -1727,32 +1727,24 @@ public class PdfViewerActivity extends AppCompatActivity {
         final String mode = speaker.getEngineMode();
         final boolean isCloudMode = "cloud".equals(mode);
         final boolean isNeuralMode = "neural".equals(mode);
-        final boolean isLocalMode = "local".equals(mode);
 
         // ---- المحرك والأصوات (النقر على المحرك يفتح قائمة الاختيار)
         LinearLayout g1 = voiceGroup(root, "المحرك والأصوات");
         addVoiceRow(g1, "محرك القراءة",
                 isCloudMode ? "صوت عصبي أونلاين مجاني"
                         : isNeuralMode ? "نموذج عصبي يعمل على الجهاز بلا إنترنت (تنزيل مرة واحدة)"
-                        : isLocalMode ? "محرك صيغي مبني من الصفر، فوري وبلا إنترنت"
                         : "صوت الجهاز يعمل بدون إنترنت",
-                isCloudMode ? "أونلاين" : isNeuralMode ? "عصبي محلي" : isLocalMode ? "صيغي" : "الجهاز", true, () -> {
+                isCloudMode ? "أونلاين" : isNeuralMode ? "عصبي محلي" : "الجهاز", true, () -> {
                     if (voiceDialog != null) voiceDialog.dismiss();
                     showEnginePicker();
                 });
         if (isNeuralMode) {
             NeuralVoiceManager.Model nm = NeuralVoiceManager.selected(this);
-            String st = NeuralVoiceManager.isBroken() ? "تعذّر تشغيله (يُستخدم الصيغي)"
+            String st = NeuralVoiceManager.isBroken() ? "تعذّر تشغيله (يُستخدم صوت الجهاز)"
                     : NeuralVoiceManager.isInstalled(this, nm) ? "جاهز" : "غير منزَّل";
-            addVoiceRow(g1, "النموذج العصبي المحلي", nm.label + " · " + st, null, true, () -> {
+            addVoiceRow(g1, "الصوت العصبي المحلي", nm.label + " · " + st, null, true, () -> {
                 if (voiceDialog != null) voiceDialog.dismiss();
                 showNeuralModelPicker();
-            });
-        } else if (isLocalMode) {
-            // المحرك الصيغي له أصوات خاصة به تخدم كل اللغات
-            addVoiceRow(g1, "صوت المحرك الصيغي", null, null, true, () -> {
-                if (voiceDialog != null) voiceDialog.dismiss();
-                showVoicePicker(0);
             });
         } else {
             for (int i = 0; i < TTS_LANG_LABELS.length; i++) {
@@ -2043,13 +2035,12 @@ public class PdfViewerActivity extends AppCompatActivity {
 
     // ------------------------------------------------------------------ اختيار المحرك والنموذج العصبي المحلي
 
-    /** قائمة المحركات الأربعة. اختيار العصبي المحلي قبل تنزيله يبدأ التنزيل (مرة واحدة). */
+    /** قائمة المحركات الثلاثة. اختيار العصبي المحلي قبل تنزيله يبدأ التنزيل (مرة واحدة). */
     private void showEnginePicker() {
-        final String[] modes = {"cloud", "neural", "local", "device"};
+        final String[] modes = {"cloud", "neural", "device"};
         final String[] labels = {
                 "عصبي أونلاين (أعلى جودة، يحتاج إنترنت)",
                 "عصبي محلي (بلا إنترنت، تنزيل مرة واحدة)",
-                "صيغي مبني من الصفر (فوري، صوته آلي)",
                 "صوت الجهاز"
         };
         int checked = 0;
@@ -2071,7 +2062,7 @@ public class PdfViewerActivity extends AppCompatActivity {
                 .show();
     }
 
-    /** اختيار نموذج عصبي محلي (المنزَّل يُفعَّل فورًا، وغير المنزَّل يُنزَّل أولًا) مع إمكانية حذف المنزَّل. */
+    /** اختيار الصوت العصبي المحلي (شاب/بنت): المنزَّل يُفعَّل فورًا، وغير المنزَّل يُنزَّل أولًا، مع إمكانية حذف المنزَّل. */
     private void showNeuralModelPicker() {
         final NeuralVoiceManager.Model[] ms = NeuralVoiceManager.MODELS;
         final String[] labels = new String[ms.length];
@@ -2096,8 +2087,8 @@ public class PdfViewerActivity extends AppCompatActivity {
                 })
                 .setNeutralButton("حذف المنزَّل", (d, w) -> {
                     for (NeuralVoiceManager.Model m : ms) NeuralVoiceManager.delete(this, m);
-                    speaker.setEngineMode("local");
-                    Toast.makeText(this, "حُذفت النماذج، تم التحويل للمحرك الصيغي.", Toast.LENGTH_SHORT).show();
+                    speaker.setEngineMode("device");
+                    Toast.makeText(this, "حُذفت النماذج، تم التحويل لصوت الجهاز.", Toast.LENGTH_SHORT).show();
                 })
                 .show();
     }
@@ -2160,24 +2151,6 @@ public class PdfViewerActivity extends AppCompatActivity {
 
     private void showVoicePicker(int langIdx) {
         final String lang = TTS_LANG_CODES[langIdx];
-        if (speaker.isLocalEngine()) {
-            final List<PdfSpeaker.VoiceOption> localOpts = speaker.listLocalVoices();
-            String[] localLabels = new String[localOpts.size()];
-            int localChecked = 0;
-            String localSaved = speaker.getPreferredLocalVoice();
-            for (int i = 0; i < localOpts.size(); i++) {
-                localLabels[i] = localOpts.get(i).label;
-                if (localOpts.get(i).name.equals(localSaved)) localChecked = i;
-            }
-            voiceDialog = new ClaudeDialog(this)
-                    .setTitle("صوت المحرك المحلي")
-                    .setSingleChoiceItems(localLabels, localChecked, (d, which) -> {
-                        speaker.setPreferredLocalVoice(localOpts.get(which).name);
-                        Toast.makeText(this, "تم تغيير الصوت - سيُطبَّق فورًا على القراءة", Toast.LENGTH_SHORT).show();
-                    })
-                    .show();
-            return;
-        }
         if (speaker.isCloudEngine()) {
             // أصوات عصبية أونلاين (مجانية) - قائمة ثابتة لكل لغة
             final List<PdfSpeaker.VoiceOption> cloudOpts = speaker.listCloudVoices(lang);

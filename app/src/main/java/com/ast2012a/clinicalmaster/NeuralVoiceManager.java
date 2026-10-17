@@ -29,14 +29,15 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 
 /**
- * الصوت العصبي المحلي الحقيقي: نموذج Piper (VITS) عربي يعمل على الجهاز بلا إنترنت عبر sherpa-onnx.
+ * الصوت العصبي المحلي الحقيقي: نماذج Piper (VITS) عربية تعمل على الجهاز بلا إنترنت عبر sherpa-onnx.
+ * صوتان فقط: "كريم" (شاب) و"ديّ" (بنت)، كل واحد يُنزَّل على حدة حسب اختيار المستخدم.
  *
- * النموذج لا يأتي داخل الـ APK؛ يُنزَّل مرة واحدة (أرشيف tar.bz2 من إصدارات sherpa-onnx على GitHub) ويُفكّ
- * في التخزين الداخلي للتطبيق، ثم يعمل بعدها بلا اتصال. التنزيل يمرّ على مجلد مؤقت ولا يُعتمد إلا بعد التحقق من
- * وجود ملفاته كلها، فلا يبقى نموذج نصف منزَّل.
+ * النموذج لا يأتي داخل الـ APK؛ يُنزَّل مرة واحدة (أرشيف tar.bz2) ويُفكّ في التخزين الداخلي للتطبيق،
+ * ثم يعمل بعدها بلا اتصال. التنزيل يمرّ على مجلد مؤقت ولا يُعتمد إلا بعد التحقق من وجود ملفاته كلها،
+ * فلا يبقى نموذج نصف منزَّل.
  *
  * كل الدوال آمنة للاستدعاء من أي خيط؛ ردود التنزيل تصل على الخيط الرئيسي. أي عطل في المكتبة الأصلية يُسجَّل
- * ({@link #isBroken()}) ويرجع القارئ تلقائيًا إلى المحرك المحلي الصيغي بدل أن يتوقف.
+ * ({@link #isBroken()}) ويرجع القارئ تلقائيًا لصوت الجهاز (TextToSpeech) بدل أن يتوقف.
  */
 final class NeuralVoiceManager {
 
@@ -57,15 +58,18 @@ final class NeuralVoiceManager {
         }
     }
 
-    private static final String BASE = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/";
+    private static final String PIPER_BASE = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/";
+    // صوت "ديّ" (بنت) ليس من إصدارات Piper الرسمية، فهو مُحوَّل ومُستضاف داخل مستودع المشروع نفسه
+    // (انظر .github/workflows/build-dii-voice.yml لخطوات التحويل والنشر).
+    private static final String DII_BASE = "https://github.com/slman14422003/AST-2012A/releases/download/tts-voices/";
 
     static final Model[] MODELS = {
-            new Model("kareem-medium", "كريم · جودة عالية",
-                    BASE + "vits-piper-ar_JO-kareem-medium.tar.bz2",
+            new Model("kareem-medium", "كريم · شاب",
+                    PIPER_BASE + "vits-piper-ar_JO-kareem-medium.tar.bz2",
                     "vits-piper-ar_JO-kareem-medium", "ar_JO-kareem-medium.onnx"),
-            new Model("kareem-low", "كريم · خفيف وأسرع",
-                    BASE + "vits-piper-ar_JO-kareem-low.tar.bz2",
-                    "vits-piper-ar_JO-kareem-low", "ar_JO-kareem-low.onnx"),
+            new Model("dii-medium", "ديّ · بنت",
+                    DII_BASE + "vits-piper-ar-dii-medium.tar.bz2",
+                    "vits-piper-ar-dii-medium", "ar-dii-medium.onnx"),
     };
 
     interface Progress {
@@ -369,7 +373,7 @@ final class NeuralVoiceManager {
     }
 
     /**
-     * يركّب النص صوتًا (WAV 16 بت أحادي). أي فشل يرمي استثناءً فيرجع المستدعي للمحرك الصيغي.
+     * يركّب النص صوتًا (WAV 16 بت أحادي). أي فشل يرمي استثناءً فيرجع المستدعي لصوت الجهاز.
      * التوقيت بين الكلمات غير متاح من النموذج، فتُرجَع مصفوفات فارغة ويقدّر القارئ التقدّم نسبيًا.
      */
     static EdgeTtsClient.Result synthesize(Context ctx, String text, EdgeTtsClient.Style style) throws IOException {

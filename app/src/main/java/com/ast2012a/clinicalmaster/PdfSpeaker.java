@@ -31,13 +31,15 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 
 /**
- * القراءة الصوتية لملف PDF - مجانية بالكامل، بمحرّكين:
+ * القراءة الصوتية لملف PDF - مجانية بالكامل، بثلاثة محرّكات:
  *
  *  1) صوت عصبي أونلاين (الافتراضي): أصوات Microsoft Neural (عربية بعدة لهجات + إنجليزي + فرنسي + تركي)
  *     عبر EdgeTtsClient - جودة قريبة جدًا من الصوت البشري، بدون مفتاح ولا حساب. الجمل التالية
  *     تُجهَّز مسبقًا أثناء نطق الحالية فلا يوجد فراغ بين الجمل.
- *  2) صوت الجهاز (android.speech.tts.TextToSpeech): يعمل بدون إنترنت، وهو الاحتياطي التلقائي
- *     لو فشل الصوت الأونلاين.
+ *  2) صوت عصبي محلي (NeuralVoiceManager): نموذج Piper/VITS عربي (شاب أو بنت) يُنزَّل مرة واحدة
+ *     ويعمل بعدها بلا إنترنت، عبر sherpa-onnx.
+ *  3) صوت الجهاز (android.speech.tts.TextToSpeech): يعمل بدون إنترنت، وهو الاحتياطي التلقائي
+ *     لو فشل الصوت العصبي (أونلاين أو محلي).
  *
  * تسلسل القراءة: جملة واحدة في كل مرة (مقطع = Chunk)، وعند انتهائها ننتقل للتي بعدها. كل عملية نطق
  * تحمل "رمزًا" (speakToken) وأي ردّ متأخر أو مكرّر من محرك سابق يُتجاهل تمامًا - وهذا يمنع إعادة
@@ -87,8 +89,8 @@ final class PdfSpeaker {
 
     private static final String PREFS = "pdf_tts";
     private static final String KEY_RATE = "rate";
-    private static final String KEY_ENGINE = "engine"; // cloud | neural | local | device
-    private static final String KEY_LOCAL_VOICE = "lvoice"; // معرّف صوت المحرك المحلي (فارغ = الافتراضي)
+    private static final String KEY_ENGINE = "engine"; // cloud | neural | device
+
     private static final String KEY_PROFILE = "profile";   // 0 طبيعي، 1 واضح (افتراضي)، 2 دراسة
     private static final String KEY_PITCH = "pitch_idx";
     private static final String KEY_MIXED = "mixed_voices";
@@ -1278,15 +1280,10 @@ final class PdfSpeaker {
 
     // ------------------------------------------------------------------ اختيار المحرك والأصوات
 
-    /** وضع المحرك: cloud (عصبي أونلاين - الافتراضي) | local (المحرك المحلي المبني من الصفر) | device (صوت الجهاز). */
+    /** وضع المحرك: cloud (عصبي أونلاين - الافتراضي) | neural (عصبي محلي، Piper عبر sherpa-onnx) | device (صوت الجهاز). */
     String getEngineMode() {
         String e = prefs.getString(KEY_ENGINE, "cloud");
-        return "neural".equals(e) || "local".equals(e) || "device".equals(e) ? e : "cloud";
-    }
-
-    /** المحرك الصيغي المبني من الصفر. */
-    boolean isLocalEngine() {
-        return "local".equals(getEngineMode());
+        return "neural".equals(e) || "device".equals(e) ? e : "cloud";
     }
 
     /** النموذج العصبي المحلي (Piper عبر sherpa-onnx) - يحتاج تنزيل النموذج مرة واحدة. */
@@ -1294,9 +1291,9 @@ final class PdfSpeaker {
         return "neural".equals(getEngineMode());
     }
 
-    /** أي محرك بلا إنترنت يعمل داخل التطبيق (صيغي أو عصبي محلي). */
+    /** أي محرك بلا إنترنت يعمل داخل التطبيق (حاليًا: العصبي المحلي فقط). */
     boolean isOfflineEngine() {
-        return isLocalEngine() || isNeuralEngine();
+        return isNeuralEngine();
     }
 
     /**
@@ -1312,7 +1309,7 @@ final class PdfSpeaker {
     }
 
     void setEngineMode(String mode) {
-        if (!"local".equals(mode) && !"device".equals(mode) && !"neural".equals(mode)) mode = "cloud";
+        if (!"device".equals(mode) && !"neural".equals(mode)) mode = "cloud";
         prefs.edit().putString(KEY_ENGINE, mode).apply();
         if ("cloud".equals(mode)) {
             try {
@@ -1333,57 +1330,21 @@ final class PdfSpeaker {
         if (state != State.IDLE) restartFromCurrentPoint();
     }
 
-    /** أصوات المحرك المحلي (تعمل بلا إنترنت). */
-    List<VoiceOption> listLocalVoices() {
-        List<VoiceOption> out = new ArrayList<>();
-        for (LocalSpeechEngine.Voice v : LocalSpeechEngine.VOICES) out.add(new VoiceOption(v.id, v.label));
-        return out;
-    }
-
-    /** null = الصوت الافتراضي للمحرك المحلي. */
-    String getPreferredLocalVoice() {
-        return prefs.getString(KEY_LOCAL_VOICE, null);
-    }
-
-    void setPreferredLocalVoice(String id) {
-        SharedPreferences.Editor e = prefs.edit();
-        if (id == null) e.remove(KEY_LOCAL_VOICE);
-        else e.putString(KEY_LOCAL_VOICE, id);
-        e.apply();
-        cloudBroken = false;
-        cloudActive = false;
-        resetCloud();
-        if (state != State.IDLE) restartFromCurrentPoint();
-    }
-
-    private LocalSpeechEngine.Voice localVoice() {
-        return LocalSpeechEngine.voiceById(prefs.getString(KEY_LOCAL_VOICE, null));
-    }
-
-    /** تركيب جملة بالمحرك المحلي بصيغة نتيجة المسار العصبي (WAV بدل MP3) - لا يرمي استثناءات. */
-    private static EdgeTtsClient.Result synthLocal(String text, LocalSpeechEngine.Voice v, EdgeTtsClient.Style style) {
-        LocalSpeechEngine.Out o = LocalSpeechEngine.synthesize(text, v, style.arRatePct, style.pitchHz,
-                style.sentencePauseMs, style.commaPauseMs);
-        if (o == null) return new EdgeTtsClient.Result(new byte[0], new int[0], new int[0]);
-        return new EdgeTtsClient.Result(o.wav, o.wordMs, o.wordChar, o.durationMs);
-    }
-
     /**
-     * تركيب جملة بلا إنترنت: النموذج العصبي المحلي للعربية لو كان منزَّلًا وسليمًا، وإلا (أو لغة أخرى أو عطل)
-     * المحرك الصيغي - فلا تتوقف القراءة أبدًا. لا يرمي استثناءات.
+     * تركيب جملة بلا إنترنت عبر النموذج العصبي المحلي (عربي فقط حاليًا). عند الفشل أو لغة أخرى يرجع
+     * {@code null} فيتولى المستدعي الرجوع التلقائي لصوت الجهاز (fallbackToDevice). لا يرمي استثناءات.
      */
     private EdgeTtsClient.Result synthOffline(String text, String lang, EdgeTtsClient.Style style) {
-        if (isNeuralEngine() && "ar".equals(lang) && NeuralVoiceManager.isReady(app)) {
-            try {
-                EdgeTtsClient.Result r = NeuralVoiceManager.synthesize(app, text, style);
-                if (r != null && r.audio != null && r.audio.length >= 200) return r;
-            } catch (Throwable ignored) {
-            }
+        if (!"ar".equals(lang) || !NeuralVoiceManager.isReady(app)) return null;
+        try {
+            EdgeTtsClient.Result r = NeuralVoiceManager.synthesize(app, text, style);
+            if (r != null && r.audio != null && r.audio.length >= 200) return r;
+        } catch (Throwable ignored) {
         }
-        return synthLocal(text, localVoice(), style);
+        return null;
     }
 
-    /** امتداد ملف الصوت المؤقت بحسب محتواه (المحرك المحلي ينتج WAV، والعصبي MP3). */
+    /** امتداد ملف الصوت المؤقت بحسب محتواه (العصبي المحلي ينتج WAV، والأونلاين MP3). */
     private static String audioExt(byte[] d) {
         return d != null && d.length > 12 && d[0] == 'R' && d[1] == 'I' && d[2] == 'F' && d[3] == 'F' ? ".wav" : ".mp3";
     }
@@ -1432,7 +1393,6 @@ final class PdfSpeaker {
 
     private String cloudVoiceFor(String lang) {
         if (isNeuralEngine()) return "neural-" + NeuralVoiceManager.selected(app).id + (NeuralVoiceManager.isReady(app) ? "" : "-x");
-        if (isLocalEngine()) return "local-" + localVoice().id; // صوت واحد لكل اللغات (المحرك يتولى الكتابات اللاتينية)
         String v = pickCloudVoice(lang);
         if (v != null) return v;
         for (String[] cv : CLOUD_VOICES) {
@@ -2062,7 +2022,7 @@ final class PdfSpeaker {
                     if (sent.trim().isEmpty()) { // مقطع كله رموز: لا يوجد ما يُنطق - نتخطاه بدون اتصال
                         r = new EdgeTtsClient.Result(new byte[0], new int[0], new int[0]);
                     } else if (offline) {
-                        r = synthOffline(sent, c.lang, style); // بلا شبكة (عصبي محلي أو صيغي)
+                        r = synthOffline(sent, c.lang, style); // بلا شبكة (عصبي محلي؛ فشل أو لغة أخرى = صوت الجهاز)
                     } else {
                         r = runs != null ? EdgeTtsClient.synthesizeRuns(sent, runs, voice, style)
                                 : EdgeTtsClient.synthesize(sent, voice, style);
