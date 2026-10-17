@@ -417,7 +417,7 @@ final class EdgeTtsClient {
     }
 
     private static Result doSynth(String text, String ssml, String voice, boolean mixed) throws IOException {
-        return doSynth(text, ssml, voice, mixed, 3, true);
+        return doSynth(text, ssml, voice, mixed, 4, true);
     }
 
     /** آخر تشخيص كامل لفشل الطلب: الصوت، حجم SSML، الأحرف الشاذة، ومقدمة النص - يظهر للمستخدم في نافذة الخطأ. */
@@ -457,9 +457,18 @@ final class EdgeTtsClient {
                 lastDiag = describeRequest(text, ssml, voice, mixed, hq);
                 lastError = (a.httpCode != 0 ? "HTTP " + a.httpCode + " " : "") + e.getMessage() + " | " + lastDiag
                         + (lastRescue.isEmpty() ? "" : " | last-rescue=" + lastRescue);
-                // 403 غالبًا بسبب فرق ساعة الجهاز عن الخادم: نصحّح الفرق ونعيد المحاولة
-                if (a.httpCode == 403 && a.serverDateMs > 0) {
-                    skewMs = a.serverDateMs - System.currentTimeMillis();
+                // 403 غالبًا بسبب فرق ساعة الجهاز عن الخادم: نصحّح الفرق ونعيد المحاولة.
+                // لو الخادم ما رجّعش ترويسة Date (يحصل أحيانًا عند رفض الترقية لـ WebSocket) فلا نعرف
+                // الفرق الحقيقي؛ بدل تكرار نفس التوقيع الفاشل، نزحزح الساعة تدريجيًا (±5 و±10 دقائق) حتى
+                // نُصادف الخانة الصحيحة (التوقيع يُقرَّب لأقرب 5 دقائق من جهة الخادم أصلًا).
+                if (a.httpCode == 403) {
+                    if (a.serverDateMs > 0) {
+                        skewMs = a.serverDateMs - System.currentTimeMillis();
+                    } else {
+                        int step = (attempt / 2) + 1;
+                        long sign = (attempt % 2 == 0) ? 1 : -1;
+                        skewMs = sign * step * 5 * 60_000L;
+                    }
                 } else if (e instanceof ServiceException && a.httpCode == 0) {
                     if (hq) { // ربما الصيغة عالية الجودة غير مدعومة: نجرّب العادية فورًا
                         hq = false;
