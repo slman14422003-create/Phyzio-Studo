@@ -1,0 +1,16 @@
+الملفات المعدَّلة (استبدلها في مكانها بنفس المسار):
+- app/src/main/java/com/ast2012a/clinicalmaster/NeuralVoiceManager.java
+- app/src/main/java/com/ast2012a/clinicalmaster/PdfSpeaker.java
+- app/src/main/java/com/ast2012a/clinicalmaster/PdfViewerActivity.java
+- app/src/main/java/com/ast2012a/clinicalmaster/AudioEnvelope.java
+
+ملف جديد:
+- .github/workflows/build-dii-voice.yml
+
+ملف يجب حذفه يدويًا من المشروع:
+- app/src/main/java/com/ast2012a/clinicalmaster/LocalSpeechEngine.java
+
+خطوة لازمة قبل أول استخدام لصوت "ديّ":
+شغّل الـ workflow الجديد يدويًا مرة واحدة من تبويب Actions على GitHub
+(Run workflow -> build-dii-voice.yml) ليُنشئ ملف الصوت المحوَّل كمرفق Release
+تحت الوسم tts-voices. بعدها يصير صوت "ديّ" قابلًا للتنزيل داخل التطبيق تلقائيًا.

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- شريط علوي موحّد لكل الشاشات: نفس لون خلفية التطبيق تمامًا، بدون حدّ
+     ولا ظل (نفس أسلوب شريط تطبيق Claude). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/bg_deep_1" />
+</shape>
