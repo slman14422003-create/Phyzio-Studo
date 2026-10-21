@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="cal_weekdays_short">
+        <item>سبت</item>
+        <item>أحد</item>
+        <item>اثنين</item>
+        <item>ثلاثاء</item>
+        <item>أربعاء</item>
+        <item>خميس</item>
+        <item>جمعة</item>
+    </string-array>
+
+    <string-array name="cal_months">
+        <item>كانون الثاني</item>
+        <item>شباط</item>
+        <item>آذار</item>
+        <item>نيسان</item>
+        <item>أيار</item>
+        <item>حزيران</item>
+        <item>تموز</item>
+        <item>آب</item>
+        <item>أيلول</item>
+        <item>تشرين الأول</item>
+        <item>تشرين الثاني</item>
+        <item>كانون الأول</item>
+    </string-array>
+
+    <string name="cal_minutes_short">%d د</string>
+    <string name="cal_month_title">%1$s %2$d</string>
+    <string name="cal_month_summary">%1$s · %2$s</string>
+    <string name="cal_month_summary_empty">لا جلسات في هذا الشهر</string>
+    <string name="cal_day_summary_empty">%s · لا جلسات</string>
+    <string name="cal_legend_session">جلسة</string>
+    <string name="cal_legend_scheduled">حسب الجدول</string>
+    <string name="cal_legend_today">اليوم</string>
+    <string name="cal_show_all">عرض الكل</string>
+    <string name="cal_prev">الشهر السابق</string>
+    <string name="cal_next">الشهر التالي</string>
+    <string name="cal_title">تقويم الجلسات</string>
+
+    <string name="pt_title">المرضى</string>
+    <string name="pt_count">%d مريض</string>
+    <string name="pt_detail_title">ملف المريض</string>
+    <string name="pt_stat_patients">مريض</string>
+    <string name="pt_stat_month_sessions">جلسة هذا الشهر</string>
+    <string name="pt_stat_dues">مستحقات</string>
+    <string name="pt_sort_recent">الأحدث</string>
+    <string name="pt_sort_name">الاسم</string>
+    <string name="pt_sort_dues">الأعلى مستحقات</string>
+    <string name="pt_sort_next">الأقرب موعدًا</string>
+    <string name="pt_search_hint">ابحث بالاسم أو الهاتف أو التشخيص</string>
+    <string name="pt_no_results">لا يوجد مرضى مطابقون لبحثك.</string>
+    <string name="pt_empty_title">لا يوجد مرضى بعد</string>
+    <string name="pt_empty_body">أنشئ ملفًا لكل مريض لتسجّل جلساته، وتتابع تحسن الألم، وتضبط حسابه المالي.</string>
+    <string name="pt_add_patient">إضافة مريض</string>
+    <string name="pt_new_patient">مريض جديد</string>
+    <string name="pt_add_patient_desc">إضافة مريض جديد</string>
+    <string name="pt_call">اتصال</string>
+    <string name="pt_sms">رسالة</string>
+    <string name="pt_whatsapp">واتساب</string>
+    <string name="pt_currency_title">رمز العملة</string>
+    <string name="pt_currency_hint">مثال: د.أ أو ₪ أو $</string>
+    <string name="pt_currency_message">يظهر بجانب المبالغ في ملفات المرضى. اتركه فارغًا لعرض الأرقام فقط.</string>
+    <string name="pt_no_dialer">لا يوجد تطبيق اتصال على هذا الجهاز.</string>
+    <string name="pt_no_app">لا يوجد تطبيق مناسب على هذا الجهاز.</string>
+    <string name="pt_owes">عليه %s</string>
+    <string name="pt_age_years">%d سنة</string>
+    <string name="pt_today">اليوم</string>
+    <string name="pt_tomorrow">غدًا</string>
+    <string name="pt_next_prefix">القادم: %s</string>
+    <string name="pt_last_prefix">آخر جلسة %s</string>
+    <string name="pt_no_next">لا موعد قادم</string>
+
+    <string name="pt_diagnosis_label">الشكوى / التشخيص</string>
+    <string name="pt_stat_sessions">جلسة</string>
+    <string name="pt_stat_pain">متوسط انخفاض الألم</string>
+    <string name="pt_stat_last">آخر جلسة</string>
+
+    <string name="pt_next_card_title">الموعد القادم</string>
+    <string name="pt_weekly_label">الجدول الأسبوعي: %s</string>
+    <string name="pt_not_set">غير محدد</string>
+    <string name="pt_auto_by_schedule">(تلقائي حسب الجدول)</string>
+    <string name="pt_expired">(انقضى)</string>
+    <string name="pt_set_appointment">تحديد موعد</string>
+    <string name="pt_change_appointment">تغيير الموعد</string>
+    <string name="pt_set_another">تحديد موعد آخر</string>
+    <string name="pt_add_to_calendar">إضافة للتقويم</string>
+    <string name="pt_clear">مسح</string>
+    <string name="pt_edit_schedule">تعديل الجدول</string>
+    <string name="pt_set_schedule">تحديد الجدول</string>
+    <string name="pt_calendar_event_title">جلسة علاج — %s</string>
+    <string name="pt_no_calendar_app">لا يوجد تطبيق تقويم على هذا الجهاز.</string>
+
+    <string name="pt_sessions_title">الجلسات</string>
+    <string name="pt_add_session">＋ جلسة</string>
+    <string name="pt_sessions_empty">لا توجد جلسات مسجلة بعد. اضغط «＋ جلسة» لتسجيل أول جلسة.</string>
+    <string name="pt_sessions_empty_day">لا جلسات في هذا اليوم.</string>
+    <string name="pt_show_less">عرض أقل</string>
+    <string name="pt_show_all_n">عرض كل الجلسات (%d)</string>
+    <string name="pt_pain_chart_title">تطور الألم عبر الجلسات (0–10)</string>
+    <string name="pt_pain_before">● قبل الجلسة</string>
+    <string name="pt_pain_after">● بعد الجلسة</string>
+    <string name="pt_pain_chip">الألم %1$d ← %2$d</string>
+    <string name="pt_delete">حذف</string>
+    <string name="pt_cancel">إلغاء</string>
+    <string name="pt_delete_session_title">حذف الجلسة</string>
+    <string name="pt_delete_session_message">سيتم حذف هذه الجلسة ورسمها من الحساب. متابعة؟</string>
+
+    <string name="pt_history_title">البروتوكولات والبرامج</string>
+    <string name="pt_link_program">ربط برنامج</string>
+    <string name="pt_history_empty">تظهر هنا البروتوكولات المستخدمة في الجلسات والبرامج التي تربطها بالمريض.</string>
+    <string name="pt_untitled_program">(برنامج بدون عنوان)</string>
+    <string name="pt_program_sub">برنامج علاج · رُبط %s</string>
+    <string name="pt_program_deleted_sub">برنامج محذوف · رُبط %s</string>
+    <string name="pt_program_missing">هذا البرنامج لم يعد موجودًا.</string>
+    <string name="pt_protocol_missing">هذا البروتوكول غير موجود في قاعدة البيانات.</string>
+    <string name="pt_protocol_use_sub">%1$s · آخر استخدام %2$s</string>
+    <string name="pt_no_programs">لا توجد برامج علاج محفوظة. أنشئ برنامجًا من شاشة برامج العلاج.</string>
+    <string name="pt_link_program_title">ربط برنامج علاج</string>
+    <string name="pt_program_linked">تم ربط البرنامج بالمريض.</string>
+    <string name="pt_program_already_linked">هذا البرنامج مربوط بالفعل.</string>
+    <string name="pt_unlink_title">إزالة الربط</string>
+    <string name="pt_unlink_message">إزالة هذا البرنامج من ملف المريض؟ (لن يُحذف البرنامج نفسه)</string>
+    <string name="pt_unlink">إزالة</string>
+
+    <string name="pt_finance_title">الحساب المالي</string>
+    <string name="pt_add_payment">＋ دفعة</string>
+    <string name="pt_finance_total">إجمالي الجلسات</string>
+    <string name="pt_finance_paid">المدفوع</string>
+    <string name="pt_finance_remaining">المتبقي</string>
+    <string name="pt_finance_credit">رصيد للمريض</string>
+    <string name="pt_payments_log">سجل الدفعات</string>
+    <string name="pt_payments_empty">لا توجد دفعات مسجلة.</string>
+    <string name="pt_delete_payment_title">حذف الدفعة</string>
+    <string name="pt_delete_payment_message">حذف دفعة بمبلغ %s؟</string>
+
+    <string name="pt_notes_title">ملاحظات</string>
+    <string name="pt_share_summary">مشاركة ملخص المريض</string>
+    <string name="pt_edit_patient">تعديل البيانات</string>
+    <string name="pt_delete_patient">حذف المريض</string>
+    <string name="pt_delete_patient_title">حذف المريض</string>
+    <string name="pt_delete_patient_message">سيتم حذف ملف \"%s\" بكل جلساته ودفعاته نهائيًا. هل أنت متأكد؟</string>
+    <string name="pt_patient_deleted">تم حذف المريض.</string>
+
+    <string name="pt_ai_prefill">ساعدني أراجع حالة هذا المريض وأقترح خطوات العلاج القادمة المناسبة.</string>
+    <string name="pt_whatsapp_intl">اكتب الرقم بصيغة دولية (مثل +9627XXXXXXXX) لفتح واتساب.</string>
+    <string name="pt_whatsapp_invalid">رقم الهاتف غير صالح لواتساب.</string>
+    <string name="pt_whatsapp_failed">تعذر فتح واتساب.</string>
+
+    <string name="pt_share_header">ملف المريض: %s</string>
+    <string name="pt_share_age">العمر: %d سنة</string>
+    <string name="pt_share_gender">الجنس: %s</string>
+    <string name="pt_share_diagnosis">الشكوى/التشخيص: %s</string>
+    <string name="pt_share_sessions_count">عدد الجلسات: %d</string>
+    <string name="pt_share_pain_avg">متوسط انخفاض الألم: %s</string>
+    <string name="pt_share_last_sessions">آخر الجلسات:</string>
+    <string name="pt_share_pain_item"> — الألم %1$d←%2$d</string>
+    <string name="pt_share_account">الحساب:</string>
+    <string name="pt_share_total">• إجمالي الجلسات: %s</string>
+    <string name="pt_share_paid">• المدفوع: %s</string>
+    <string name="pt_share_remaining">• المتبقي: %s</string>
+    <string name="pt_share_credit">• رصيد للمريض: %s</string>
+    <string name="pt_share_schedule">جدول الجلسات: %s</string>
+    <string name="pt_share_next">الموعد القادم: %s</string>
+    <string name="pt_share_chooser">مشاركة ملخص المريض</string>
+    <string name="pt_unnamed">(بدون اسم)</string>
+</resources>

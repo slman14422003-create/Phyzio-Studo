@@ -1725,10 +1725,11 @@ public class PdfViewerActivity extends AppCompatActivity {
     private void buildVoiceSettingsContent(LinearLayout root, Runnable refresh) {
         root.removeAllViews();
         LinearLayout g1 = voiceGroup(root, "الأصوات");
-        addVoiceRow(g1, "مفتاح Azure (اختياري)", "أصوات أقوى مجانًا حتى 500 ألف حرف شهريًا، وعند انتهائها يعود Google تلقائيًا",
-                EdgeTtsClient.azureEnabled() ? "مفعّل" : "غير مفعّل", false, () -> {
+        final boolean deviceMode = "device".equals(speaker.getEngineMode());
+        addVoiceRow(g1, "محرك القراءة", deviceMode ? "محرك النطق المدمج بالجهاز" : "Google أونلاين",
+                deviceMode ? "الجهاز" : "أونلاين", true, () -> {
                     if (voiceDialog != null) voiceDialog.dismiss();
-                    showAzureDialog();
+                    showEnginePicker();
                 });
         for (int i = 0; i < TTS_LANG_LABELS.length; i++) {
             final int idx = i;
@@ -1784,6 +1785,12 @@ public class PdfViewerActivity extends AppCompatActivity {
             letterDialog = LetterDictionaryDialog.show(this, speaker);
         });
         addVoiceRow(g5, "مؤقت النوم", null, sleepLabel(), false, () -> { cycleSleepTimer(); refresh.run(); });
+        if (deviceMode) {
+            addVoiceRow(g5, "إعدادات محرك النطق في النظام", null, null, true, () -> {
+                if (voiceDialog != null) voiceDialog.dismiss();
+                openSystemTtsSettings();
+            });
+        }
     }
 
     /** يضيف عنوان قسم صغير + بطاقة مجموعة (Settings.Group) ويُرجع البطاقة لإضافة الصفوف فيها. */
@@ -1907,39 +1914,6 @@ public class PdfViewerActivity extends AppCompatActivity {
     }
 
     /** قاموس نطق خاص: سطر لكل كلمة بصيغة  كلمة=نطقها  (مثال: Piriformis=بيريفورميس). */
-    private void showAzureDialog() {
-        final EditText key = new EditText(this);
-        key.setText(speaker.getAzureKey());
-        key.setHint("Key");
-        key.setSingleLine(true);
-        final EditText region = new EditText(this);
-        region.setText(speaker.getAzureRegion());
-        region.setHint("Region (westeurope, uaenorth, eastus ...)");
-        region.setSingleLine(true);
-        LinearLayout box = new LinearLayout(this);
-        box.setOrientation(LinearLayout.VERTICAL);
-        int pad = Ui.dp(this, 8);
-        box.setPadding(pad, pad, pad, 0);
-        box.addView(key, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT));
-        box.addView(region, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT));
-        voiceDialog = new ClaudeDialog(this)
-                .setTitle("Azure Speech (F0)")
-                .setMessage("Azure Portal > Speech > Keys and Endpoint")
-                .setView(box)
-                .setPositiveButton("حفظ", (d, w) -> {
-                    speaker.setAzure(key.getText().toString(), region.getText().toString());
-                    Toast.makeText(this, "تم الحفظ", Toast.LENGTH_SHORT).show();
-                })
-                .setNeutralButton("إيقاف", (d, w) -> {
-                    speaker.setAzure("", "");
-                    Toast.makeText(this, "تم الإيقاف", Toast.LENGTH_SHORT).show();
-                })
-                .setNegativeButton("إلغاء", null)
-                .show();
-    }
-
     private void showLexiconEditor() {
         final EditText input = new EditText(this);
         input.setText(speaker.getUserLexicon());
@@ -1962,6 +1936,20 @@ public class PdfViewerActivity extends AppCompatActivity {
                     Toast.makeText(this, "تم حفظ القاموس.", Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton("إلغاء", null)
+                .show();
+    }
+
+    private void showEnginePicker() {
+        final String[] modes = {"cloud", "device"};
+        final String[] labels = {"أونلاين (Google، يحتاج إنترنت)", "محرك الجهاز المدمج (بلا إنترنت)"};
+        int checked = "device".equals(speaker.getEngineMode()) ? 1 : 0;
+        voiceDialog = new ClaudeDialog(this)
+                .setTitle("محرك القراءة")
+                .setSingleChoiceItems(labels, checked, (d, which) -> {
+                    speaker.setEngineMode(modes[which]);
+                    Toast.makeText(this, "تم تغيير محرك القراءة", Toast.LENGTH_SHORT).show();
+                    d.dismiss();
+                })
                 .show();
     }
 

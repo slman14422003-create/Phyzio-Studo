@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.provider.CalendarContract;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -16,16 +17,14 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.appbar.MaterialToolbar;
 
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-/**
- * ملف المريض: بيانات أساسية + اتصال سريع + الموعد القادم + سجل الجلسات
- * (مع مخطط تطور الألم) + التاريخ العلاجي (البروتوكولات والبرامج) + الحساب
- * المالي (رسوم ودفعات ورصيد) + مشاركة ملخص.
- */
 public class PatientDetailActivity extends AppCompatActivity {
 
     private static final int SESSIONS_PREVIEW = 5;
@@ -39,6 +38,14 @@ public class PatientDetailActivity extends AppCompatActivity {
     private LinearLayout sessionsContainer;
     private LinearLayout historyContainer;
     private LinearLayout paymentsContainer;
+    private SessionCalendarView calendarView;
+    private TextView monthTitle;
+    private TextView calendarSummary;
+    private View clearDayButton;
+
+    private int viewYear = -1;
+    private int viewMonth = -1;
+    private long selectedDay = 0L;
 
     @Override
     public void finish() {
@@ -72,9 +79,33 @@ public class PatientDetailActivity extends AppCompatActivity {
         sessionsContainer = findViewById(R.id.sessions_container);
         historyContainer = findViewById(R.id.history_container);
         paymentsContainer = findViewById(R.id.payments_container);
+        calendarView = findViewById(R.id.calendar_view);
+        monthTitle = findViewById(R.id.calendar_month_title);
+        calendarSummary = findViewById(R.id.calendar_summary);
+        clearDayButton = findViewById(R.id.btn_clear_day);
+
+        Calendar now = Calendar.getInstance();
+        viewYear = now.get(Calendar.YEAR);
+        viewMonth = now.get(Calendar.MONTH);
+
+        calendarView.setOnDayClickListener(day -> {
+            selectedDay = selectedDay == day ? 0L : day;
+            showAllSessions = false;
+            calendarView.setSelectedDay(selectedDay);
+            updateCalendarSummary();
+            bindSessions();
+        });
+        findViewById(R.id.btn_prev_month).setOnClickListener(v -> shiftMonth(-1));
+        findViewById(R.id.btn_next_month).setOnClickListener(v -> shiftMonth(1));
+        clearDayButton.setOnClickListener(v -> {
+            selectedDay = 0L;
+            calendarView.setSelectedDay(0L);
+            updateCalendarSummary();
+            bindSessions();
+        });
 
         findViewById(R.id.btn_add_session).setOnClickListener(v ->
-                PatientDialogs.showSession(this, patientId, null, null, this::reload));
+                PatientDialogs.showSession(this, patientId, null, null, selectedDay, this::reload));
         findViewById(R.id.btn_add_payment).setOnClickListener(v ->
                 PatientDialogs.showPayment(this, patientId, this::reload));
         findViewById(R.id.btn_add_assignment).setOnClickListener(v -> pickProgramToAssign());
@@ -88,18 +119,8 @@ public class PatientDetailActivity extends AppCompatActivity {
         findViewById(R.id.btn_sms).setOnClickListener(v -> openPhone("smsto:"));
         findViewById(R.id.btn_whatsapp).setOnClickListener(v -> openWhatsApp());
         findViewById(R.id.btn_share_summary).setOnClickListener(v -> shareSummary());
-        findViewById(R.id.btn_edit_schedule).setOnClickListener(v -> {
-            Intent i = new Intent(this, AddEditPatientActivity.class);
-            i.putExtra("edit_patient_id", patientId);
-            startActivity(i);
-            overridePendingTransition(R.anim.slide_up_in, R.anim.fade_out);
-        });
-        findViewById(R.id.btn_edit_patient).setOnClickListener(v -> {
-            Intent i = new Intent(this, AddEditPatientActivity.class);
-            i.putExtra("edit_patient_id", patientId);
-            startActivity(i);
-            overridePendingTransition(R.anim.slide_up_in, R.anim.fade_out);
-        });
+        findViewById(R.id.btn_edit_schedule).setOnClickListener(v -> openEditPatient());
+        findViewById(R.id.btn_edit_patient).setOnClickListener(v -> openEditPatient());
         findViewById(R.id.btn_delete_patient).setOnClickListener(v -> confirmDeletePatient());
         findViewById(R.id.btn_more_sessions).setOnClickListener(v -> {
             showAllSessions = !showAllSessions;
@@ -113,6 +134,13 @@ public class PatientDetailActivity extends AppCompatActivity {
         reload();
     }
 
+    private void openEditPatient() {
+        Intent i = new Intent(this, AddEditPatientActivity.class);
+        i.putExtra("edit_patient_id", patientId);
+        startActivity(i);
+        overridePendingTransition(R.anim.slide_up_in, R.anim.fade_out);
+    }
+
     private void reload() {
         patient = PatientManager.getPatient(this, patientId);
         if (patient == null) {
@@ -122,17 +150,13 @@ public class PatientDetailActivity extends AppCompatActivity {
         currency = PatientManager.getCurrency(this);
         bindHeader();
         bindStats();
-        bindSchedule();
-        bindAppointment();
+        bindNextCard();
+        bindCalendar();
         bindSessions();
         bindHistory();
         bindFinance();
         bindNotes();
     }
-
-    // =====================================================================
-    // الرأس والملخص
-    // =====================================================================
 
     private void bindHeader() {
         ((TextView) findViewById(R.id.detail_avatar)).setText(Fmt.initial(patient.name));
@@ -140,7 +164,7 @@ public class PatientDetailActivity extends AppCompatActivity {
 
         TextView meta = findViewById(R.id.detail_meta);
         StringBuilder sb = new StringBuilder();
-        if (patient.age > 0) sb.append(patient.age).append(" سنة");
+        if (patient.age > 0) sb.append(getString(R.string.pt_age_years, patient.age));
         if (!patient.gender.isEmpty()) {
             if (sb.length() > 0) sb.append(" · ");
             sb.append(patient.gender);
@@ -183,62 +207,37 @@ public class PatientDetailActivity extends AppCompatActivity {
         if (has) ((TextView) findViewById(R.id.detail_notes)).setText(BidiText.fix(patient.notes.trim()));
     }
 
-    // =====================================================================
-    // الموعد القادم
-    // =====================================================================
-
-    // =====================================================================
-    // جدول الجلسات الأسبوعي
-    // =====================================================================
-
-    private void bindSchedule() {
-        TextView text = findViewById(R.id.schedule_text);
-        TextView next = findViewById(R.id.schedule_next);
-        TextView editBtn = findViewById(R.id.btn_edit_schedule);
-
-        if (patient.hasSchedule()) {
-            text.setText(BidiText.fix(patient.scheduleLabel()));
-            String nextLabel = patient.nextScheduledLabel(System.currentTimeMillis());
-            if (nextLabel.isEmpty()) {
-                next.setVisibility(View.GONE);
-            } else {
-                next.setText(BidiText.fix("الجلسة القادمة حسب الجدول: " + nextLabel));
-                next.setVisibility(View.VISIBLE);
-            }
-            editBtn.setText("تعديل الجدول");
-        } else {
-            text.setText("غير محدد");
-            next.setVisibility(View.GONE);
-            editBtn.setText("تحديد الجدول");
-        }
-    }
-
-    private void bindAppointment() {
+    private void bindNextCard() {
         TextView text = findViewById(R.id.appointment_text);
         TextView setBtn = findViewById(R.id.btn_set_appointment);
+        TextView scheduleBtn = findViewById(R.id.btn_edit_schedule);
+        TextView scheduleText = findViewById(R.id.schedule_text);
         View calBtn = findViewById(R.id.btn_add_to_calendar);
         View clearBtn = findViewById(R.id.btn_clear_appointment);
+
+        String weekly = patient.hasSchedule() ? patient.scheduleLabel() : getString(R.string.pt_not_set);
+        scheduleText.setText(BidiText.fix(getString(R.string.pt_weekly_label, weekly)));
+        scheduleBtn.setText(patient.hasSchedule() ? R.string.pt_edit_schedule : R.string.pt_set_schedule);
 
         long now = System.currentTimeMillis();
         long effective = patient.effectiveNextAppointment(now);
         boolean manualFuture = patient.nextAppointment > now;
 
         if (effective > 0) {
-            // تلقائي: موعد يدوي مستقبلي إن وُجد، وإلا أقرب جلسة حسب الجدول الأسبوعي
             String value = patient.nextAppointmentLabel(now);
-            if (!manualFuture) value += "  (تلقائي حسب الجدول)";
+            if (!manualFuture) value += "  " + getString(R.string.pt_auto_by_schedule);
             text.setText(BidiText.fix(value));
-            setBtn.setText(manualFuture ? "تغيير الموعد" : "تحديد موعد آخر");
+            setBtn.setText(manualFuture ? R.string.pt_change_appointment : R.string.pt_set_another);
             calBtn.setVisibility(View.VISIBLE);
             clearBtn.setVisibility(patient.nextAppointment > 0 ? View.VISIBLE : View.GONE);
         } else if (patient.nextAppointment > 0) {
-            text.setText(BidiText.fix(Fmt.dateTime(patient.nextAppointment) + "  (انقضى)"));
-            setBtn.setText("تغيير الموعد");
+            text.setText(BidiText.fix(Fmt.dateTime(patient.nextAppointment) + "  " + getString(R.string.pt_expired)));
+            setBtn.setText(R.string.pt_change_appointment);
             calBtn.setVisibility(View.VISIBLE);
             clearBtn.setVisibility(View.VISIBLE);
         } else {
-            text.setText("غير محدد");
-            setBtn.setText("تحديد موعد");
+            text.setText(R.string.pt_not_set);
+            setBtn.setText(R.string.pt_set_appointment);
             calBtn.setVisibility(View.GONE);
             clearBtn.setVisibility(View.GONE);
         }
@@ -270,41 +269,103 @@ public class PatientDetailActivity extends AppCompatActivity {
                 .putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, begin)
                 .putExtra(CalendarContract.EXTRA_EVENT_END_TIME, begin + 45L * 60 * 1000)
                 .putExtra(CalendarContract.EXTRA_EVENT_ALL_DAY, !timed)
-                .putExtra(CalendarContract.Events.TITLE, "جلسة علاج — " + patient.displayName());
+                .putExtra(CalendarContract.Events.TITLE,
+                        getString(R.string.pt_calendar_event_title, patient.displayName()));
         try {
             startActivity(i);
         } catch (ActivityNotFoundException e) {
-            Toast.makeText(this, "لا يوجد تطبيق تقويم على هذا الجهاز.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.pt_no_calendar_app, Toast.LENGTH_SHORT).show();
         }
     }
 
-    // =====================================================================
-    // الجلسات
-    // =====================================================================
+    private void shiftMonth(int delta) {
+        Calendar c = Calendar.getInstance();
+        c.clear();
+        c.set(viewYear, viewMonth, 1);
+        c.add(Calendar.MONTH, delta);
+        viewYear = c.get(Calendar.YEAR);
+        viewMonth = c.get(Calendar.MONTH);
+        selectedDay = 0L;
+        showAllSessions = false;
+        bindCalendar();
+        bindSessions();
+    }
+
+    private void bindCalendar() {
+        String[] months = getResources().getStringArray(R.array.cal_months);
+        monthTitle.setText(getString(R.string.cal_month_title, months[viewMonth], viewYear));
+        calendarView.setMonth(viewYear, viewMonth);
+        calendarView.setData(patient.sessions, patient.sessionDaysMask);
+        calendarView.setSelectedDay(selectedDay);
+        updateCalendarSummary();
+    }
+
+    private String countAndMinutes(int count, int minutes) {
+        String label = Fmt.sessionsLabel(count);
+        return minutes > 0 ? label + " · " + Fmt.minutes(minutes) : label;
+    }
+
+    private void updateCalendarSummary() {
+        int count = 0;
+        int minutes = 0;
+        Calendar c = Calendar.getInstance();
+        for (Patient.Session s : patient.sessions) {
+            if (selectedDay != 0L) {
+                if (Fmt.startOfDay(s.date) != selectedDay) continue;
+            } else {
+                c.setTimeInMillis(s.date);
+                if (c.get(Calendar.YEAR) != viewYear || c.get(Calendar.MONTH) != viewMonth) continue;
+            }
+            count++;
+            minutes += Math.max(0, s.durationMin);
+        }
+        String text;
+        if (selectedDay != 0L) {
+            String day = Fmt.dayDate(selectedDay);
+            text = count == 0
+                    ? getString(R.string.cal_day_summary_empty, day)
+                    : getString(R.string.cal_month_summary, day, countAndMinutes(count, minutes));
+        } else {
+            text = count == 0
+                    ? getString(R.string.cal_month_summary_empty)
+                    : countAndMinutes(count, minutes);
+        }
+        calendarSummary.setText(BidiText.fix(text));
+    }
 
     private void bindSessions() {
-        List<Patient.Session> newestFirst = patient.sessionsNewestFirst();
+        boolean filtered = selectedDay != 0L;
+        List<Patient.Session> list = new ArrayList<>();
+        if (filtered) {
+            for (Patient.Session s : patient.sessionsOldestFirst()) {
+                if (Fmt.startOfDay(s.date) == selectedDay) list.add(s);
+            }
+        } else {
+            list = patient.sessionsNewestFirst();
+        }
         sessionsContainer.removeAllViews();
 
-        boolean has = !newestFirst.isEmpty();
-        findViewById(R.id.sessions_empty).setVisibility(has ? View.GONE : View.VISIBLE);
+        clearDayButton.setVisibility(filtered ? View.VISIBLE : View.GONE);
+        TextView empty = findViewById(R.id.sessions_empty);
+        empty.setText(filtered ? R.string.pt_sessions_empty_day : R.string.pt_sessions_empty);
+        empty.setVisibility(list.isEmpty() ? View.VISIBLE : View.GONE);
 
-        int limit = showAllSessions ? newestFirst.size() : Math.min(SESSIONS_PREVIEW, newestFirst.size());
-        for (int i = 0; i < limit; i++) sessionsContainer.addView(buildSessionRow(newestFirst.get(i)));
+        int limit = filtered || showAllSessions ? list.size() : Math.min(SESSIONS_PREVIEW, list.size());
+        for (int i = 0; i < limit; i++) sessionsContainer.addView(buildSessionRow(list.get(i)));
 
         TextView more = findViewById(R.id.btn_more_sessions);
-        if (newestFirst.size() > SESSIONS_PREVIEW) {
+        if (!filtered && list.size() > SESSIONS_PREVIEW) {
             more.setVisibility(View.VISIBLE);
-            more.setText(showAllSessions ? "عرض أقل" : "عرض كل الجلسات (" + newestFirst.size() + ")");
+            more.setText(showAllSessions
+                    ? getString(R.string.pt_show_less)
+                    : getString(R.string.pt_show_all_n, list.size()));
         } else {
             more.setVisibility(View.GONE);
         }
 
-        // مخطط الألم: من الجلسات المسجّل فيها الألم قبل وبعد، بترتيب زمني
-        List<Patient.Session> oldestFirst = patient.sessionsOldestFirst();
         List<Float> before = new ArrayList<>();
         List<Float> after = new ArrayList<>();
-        for (Patient.Session s : oldestFirst) {
+        for (Patient.Session s : patient.sessionsOldestFirst()) {
             if (s.hasPain()) {
                 before.add((float) s.painBefore);
                 after.add((float) s.painAfter);
@@ -327,14 +388,24 @@ public class PatientDetailActivity extends AppCompatActivity {
 
     private View buildSessionRow(final Patient.Session s) {
         View row = inflater.inflate(R.layout.item_session_row, sessionsContainer, false);
-        ((TextView) row.findViewById(R.id.session_date)).setText(BidiText.fix(Fmt.dateTime(s.date)));
+        Calendar c = Calendar.getInstance();
+        c.setTimeInMillis(s.date);
+        ((TextView) row.findViewById(R.id.session_day_num)).setText(
+                String.format(Locale.US, "%d", c.get(Calendar.DAY_OF_MONTH)));
+        ((TextView) row.findViewById(R.id.session_day_name)).setText(Fmt.dayName(c.get(Calendar.DAY_OF_WEEK)));
+        ((TextView) row.findViewById(R.id.session_time)).setText(
+                BidiText.fix(Fmt.date(s.date) + " · " + Fmt.time(s.date)));
+
+        TextView duration = row.findViewById(R.id.session_duration);
+        if (s.durationMin > 0) {
+            duration.setText(BidiText.fix(Fmt.minutes(s.durationMin)));
+            duration.setVisibility(View.VISIBLE);
+        }
 
         TextView fee = row.findViewById(R.id.session_fee);
         if (s.fee > 0) {
             fee.setText(Fmt.money(s.fee, currency));
             fee.setVisibility(View.VISIBLE);
-        } else {
-            fee.setVisibility(View.GONE);
         }
 
         TextView protocol = row.findViewById(R.id.session_protocol);
@@ -350,78 +421,43 @@ public class PatientDetailActivity extends AppCompatActivity {
         }
 
         LinearLayout chips = row.findViewById(R.id.session_chips);
-        if (s.hasPain()) addSessionChip(chips, "الألم " + s.painBefore + " ← " + s.painAfter, true);
-        if (s.durationMin > 0) addSessionChip(chips, Fmt.minutes(s.durationMin), false);
+        if (s.hasPain()) {
+            addSessionChip(chips, getString(R.string.pt_pain_chip, s.painBefore, s.painAfter));
+        }
         if (chips.getChildCount() == 0) chips.setVisibility(View.GONE);
 
         TextView notes = row.findViewById(R.id.session_notes);
-        if (s.notes.trim().isEmpty()) {
-            notes.setVisibility(View.GONE);
-        } else {
+        if (!s.notes.trim().isEmpty()) {
             notes.setText(BidiText.fix(s.notes.trim()));
             notes.setVisibility(View.VISIBLE);
         }
 
-        row.setOnClickListener(v -> showSessionOptions(s));
+        row.setOnClickListener(v -> PatientDialogs.showSession(this, patientId, s, null, this::reload));
+        row.findViewById(R.id.session_delete).setOnClickListener(v -> confirmDeleteSession(s));
         return row;
     }
 
-    private void addSessionChip(LinearLayout parent, String text, boolean pain) {
+    private void addSessionChip(LinearLayout parent, String text) {
         TextView chip = (TextView) inflater.inflate(R.layout.item_badge, parent, false);
         chip.setText(BidiText.fix(text));
         chip.setTextDirection(View.TEXT_DIRECTION_RTL);
-        chip.setBackgroundResource(pain ? R.drawable.bg_badge_ems : R.drawable.bg_badge_tens);
-        chip.setTextColor(getColor(pain ? R.color.m3_on_primary_container : R.color.m3_on_secondary_container));
-        LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) chip.getLayoutParams();
-        lp.setMarginEnd(Ui.dp(this, 6));
+        chip.setBackgroundResource(R.drawable.bg_badge_ems);
+        chip.setTextColor(getColor(R.color.m3_on_primary_container));
         parent.addView(chip);
-    }
-
-    private void showSessionOptions(final Patient.Session s) {
-        final CaseItem linked = findCaseByTitle(s.protocol);
-        final List<String> labels = new ArrayList<>();
-        final List<Integer> actions = new ArrayList<>(); // 0 تعديل، 1 فتح البروتوكول، 2 حذف
-        labels.add("تعديل الجلسة");
-        actions.add(0);
-        if (linked != null) {
-            labels.add("فتح البروتوكول");
-            actions.add(1);
-        }
-        labels.add("حذف الجلسة");
-        actions.add(2);
-
-        new ClaudeDialog(this)
-                .setTitle(BidiText.fix(Fmt.dateTime(s.date)))
-                .setItems(labels.toArray(new String[0]), (dialog, which) -> {
-                    int action = actions.get(which);
-                    if (action == 0) {
-                        PatientDialogs.showSession(this, patientId, s, null, this::reload);
-                    } else if (action == 1) {
-                        openCase(linked);
-                    } else {
-                        confirmDeleteSession(s);
-                    }
-                })
-                .show();
     }
 
     private void confirmDeleteSession(final Patient.Session s) {
         new ClaudeDialog(this)
-                .setTitle("حذف الجلسة")
-                .setMessage("سيتم حذف هذه الجلسة ورسمها من الحساب. متابعة؟")
-                .setPositiveButton("حذف", (dialog, which) -> {
+                .setTitle(getString(R.string.pt_delete_session_title))
+                .setMessage(getString(R.string.pt_delete_session_message))
+                .setPositiveButton(getString(R.string.pt_delete), (dialog, which) -> {
                     PatientManager.deleteSession(this, patientId, s.id);
                     reload();
                 })
-                .setNegativeButton("إلغاء", null)
+                .setNegativeButton(getString(R.string.pt_cancel), null)
                 .show();
     }
 
-    // =====================================================================
-    // التاريخ العلاجي
-    // =====================================================================
-
-    /** ملخص استخدام بروتوكول داخل جلسات المريض. */
     private static class ProtocolUse {
         int count;
         long lastDate;
@@ -432,21 +468,19 @@ public class PatientDetailActivity extends AppCompatActivity {
         long now = System.currentTimeMillis();
         int rows = 0;
 
-        // البرامج المربوطة يدويًا
         for (final Patient.Assignment a : patient.assignments) {
             final TreatmentProgram program = findProgram(a.refId);
             View row = inflater.inflate(R.layout.item_history_row, historyContainer, false);
-            ((android.widget.ImageView) row.findViewById(R.id.history_icon)).setImageResource(R.drawable.ic_clipboard);
+            ((ImageView) row.findViewById(R.id.history_icon)).setImageResource(R.drawable.ic_clipboard);
             String title = program != null ? program.title : a.title;
-            if (title.trim().isEmpty()) title = "(برنامج بدون عنوان)";
+            if (title.trim().isEmpty()) title = getString(R.string.pt_untitled_program);
             ((TextView) row.findViewById(R.id.history_title)).setText(BidiText.fix(title));
-            String sub = program != null
-                    ? "برنامج علاج · رُبط " + Fmt.relative(a.date, now)
-                    : "برنامج محذوف · رُبط " + Fmt.relative(a.date, now);
+            String sub = getString(program != null ? R.string.pt_program_sub : R.string.pt_program_deleted_sub,
+                    Fmt.relative(a.date, now));
             ((TextView) row.findViewById(R.id.history_sub)).setText(BidiText.fix(sub));
             row.setOnClickListener(v -> {
                 if (program == null) {
-                    Toast.makeText(this, "هذا البرنامج لم يعد موجودًا.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, R.string.pt_program_missing, Toast.LENGTH_SHORT).show();
                     return;
                 }
                 Intent i = new Intent(this, TreatmentProgramDetailActivity.class);
@@ -462,7 +496,6 @@ public class PatientDetailActivity extends AppCompatActivity {
             rows++;
         }
 
-        // البروتوكولات المستخدمة في الجلسات (مجمّعة بالعنوان)
         Map<String, ProtocolUse> uses = new LinkedHashMap<>();
         for (Patient.Session s : patient.sessionsNewestFirst()) {
             String key = s.protocol.trim();
@@ -479,14 +512,15 @@ public class PatientDetailActivity extends AppCompatActivity {
             final String protocolTitle = e.getKey();
             ProtocolUse u = e.getValue();
             View row = inflater.inflate(R.layout.item_history_row, historyContainer, false);
-            ((android.widget.ImageView) row.findViewById(R.id.history_icon)).setImageResource(R.drawable.ic_zap);
+            ((ImageView) row.findViewById(R.id.history_icon)).setImageResource(R.drawable.ic_zap);
             ((TextView) row.findViewById(R.id.history_title)).setText(BidiText.fix(protocolTitle));
             ((TextView) row.findViewById(R.id.history_sub)).setText(BidiText.fix(
-                    Fmt.sessionsLabel(u.count) + " · آخر استخدام " + Fmt.relative(u.lastDate, now)));
+                    getString(R.string.pt_protocol_use_sub, Fmt.sessionsLabel(u.count),
+                            Fmt.relative(u.lastDate, now))));
             row.setOnClickListener(v -> {
                 CaseItem c = findCaseByTitle(protocolTitle);
                 if (c == null) {
-                    Toast.makeText(this, "هذا البروتوكول غير موجود في قاعدة البيانات.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, R.string.pt_protocol_missing, Toast.LENGTH_SHORT).show();
                 } else {
                     openCase(c);
                 }
@@ -501,22 +535,22 @@ public class PatientDetailActivity extends AppCompatActivity {
     private void pickProgramToAssign() {
         final List<TreatmentProgram> programs = TreatmentProgramManager.loadPrograms(this);
         if (programs.isEmpty()) {
-            Toast.makeText(this, "لا توجد برامج علاج محفوظة. أنشئ برنامجًا من شاشة برامج العلاج.",
-                    Toast.LENGTH_LONG).show();
+            Toast.makeText(this, R.string.pt_no_programs, Toast.LENGTH_LONG).show();
             return;
         }
         String[] names = new String[programs.size()];
         for (int i = 0; i < names.length; i++) {
             String t = programs.get(i).title;
-            names[i] = t.trim().isEmpty() ? "(برنامج بدون عنوان)" : t;
+            names[i] = t.trim().isEmpty() ? getString(R.string.pt_untitled_program) : t;
         }
         new ClaudeDialog(this)
-                .setTitle("ربط برنامج علاج")
+                .setTitle(getString(R.string.pt_link_program_title))
                 .setItems(names, (dialog, which) -> {
                     TreatmentProgram p = programs.get(which);
                     boolean added = PatientManager.addAssignment(this, patientId,
                             Patient.Assignment.create(Patient.Assignment.TYPE_PROGRAM, p.id, p.title));
-                    Toast.makeText(this, added ? "تم ربط البرنامج بالمريض." : "هذا البرنامج مربوط بالفعل.",
+                    Toast.makeText(this,
+                            added ? R.string.pt_program_linked : R.string.pt_program_already_linked,
                             Toast.LENGTH_SHORT).show();
                     reload();
                 })
@@ -525,13 +559,13 @@ public class PatientDetailActivity extends AppCompatActivity {
 
     private void confirmRemoveAssignment(final Patient.Assignment a) {
         new ClaudeDialog(this)
-                .setTitle("إزالة الربط")
-                .setMessage("إزالة هذا البرنامج من ملف المريض؟ (لن يُحذف البرنامج نفسه)")
-                .setPositiveButton("إزالة", (dialog, which) -> {
+                .setTitle(getString(R.string.pt_unlink_title))
+                .setMessage(getString(R.string.pt_unlink_message))
+                .setPositiveButton(getString(R.string.pt_unlink), (dialog, which) -> {
                     PatientManager.removeAssignment(this, patientId, a.id);
                     reload();
                 })
-                .setNegativeButton("إلغاء", null)
+                .setNegativeButton(getString(R.string.pt_cancel), null)
                 .show();
     }
 
@@ -543,8 +577,6 @@ public class PatientDetailActivity extends AppCompatActivity {
         return null;
     }
 
-    /** يبحث عن الحالة بالعنوان: تطابق تام أولًا، ثم تطابق مُطبَّع (مسافات/همزات/تاء مربوطة)،
-     *  ثم احتواء متبادل - حتى لا يفشل فتح البروتوكول لمجرد اختلاف بسيط في الكتابة. */
     private CaseItem findCaseByTitle(String title) {
         if (title == null || title.trim().isEmpty()) return null;
         String wanted = title.trim();
@@ -584,10 +616,6 @@ public class PatientDetailActivity extends AppCompatActivity {
         overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
     }
 
-    // =====================================================================
-    // الحساب المالي
-    // =====================================================================
-
     private void bindFinance() {
         double charged = patient.totalCharged();
         double paid = patient.totalPaid();
@@ -599,22 +627,22 @@ public class PatientDetailActivity extends AppCompatActivity {
         TextView balanceView = findViewById(R.id.finance_balance);
         TextView balanceLabel = findViewById(R.id.finance_balance_label);
         if (balance < -0.004) {
-            balanceLabel.setText("رصيد للمريض");
+            balanceLabel.setText(R.string.pt_finance_credit);
             balanceView.setText(Fmt.money(-balance, currency));
             balanceView.setTextColor(getColor(R.color.accent_green));
         } else if (balance > 0.004) {
-            balanceLabel.setText("المتبقي");
+            balanceLabel.setText(R.string.pt_finance_remaining);
             balanceView.setText(Fmt.money(balance, currency));
             balanceView.setTextColor(getColor(R.color.accent_red));
         } else {
-            balanceLabel.setText("المتبقي");
+            balanceLabel.setText(R.string.pt_finance_remaining);
             balanceView.setText(Fmt.money(0, currency));
             balanceView.setTextColor(getColor(R.color.accent_green));
         }
 
         paymentsContainer.removeAllViews();
         List<Patient.Payment> sorted = new ArrayList<>(patient.payments);
-        java.util.Collections.sort(sorted, new java.util.Comparator<Patient.Payment>() {
+        Collections.sort(sorted, new Comparator<Patient.Payment>() {
             @Override
             public int compare(Patient.Payment a, Patient.Payment b) {
                 return Long.compare(b.date, a.date);
@@ -625,13 +653,11 @@ public class PatientDetailActivity extends AppCompatActivity {
             ((TextView) row.findViewById(R.id.payment_date)).setText(BidiText.fix(Fmt.date(p.date)));
             ((TextView) row.findViewById(R.id.payment_amount)).setText(Fmt.money(p.amount, currency));
             TextView note = row.findViewById(R.id.payment_note);
-            if (p.note.trim().isEmpty()) {
-                note.setVisibility(View.GONE);
-            } else {
+            if (!p.note.trim().isEmpty()) {
                 note.setText(BidiText.fix(p.note.trim()));
                 note.setVisibility(View.VISIBLE);
             }
-            row.setOnClickListener(v -> confirmDeletePayment(p));
+            row.findViewById(R.id.payment_delete).setOnClickListener(v -> confirmDeletePayment(p));
             paymentsContainer.addView(row);
         }
         findViewById(R.id.payments_empty).setVisibility(sorted.isEmpty() ? View.VISIBLE : View.GONE);
@@ -639,48 +665,34 @@ public class PatientDetailActivity extends AppCompatActivity {
 
     private void confirmDeletePayment(final Patient.Payment p) {
         new ClaudeDialog(this)
-                .setTitle("حذف الدفعة")
-                .setMessage("حذف دفعة بمبلغ " + Fmt.money(p.amount, currency) + "؟")
-                .setPositiveButton("حذف", (dialog, which) -> {
+                .setTitle(getString(R.string.pt_delete_payment_title))
+                .setMessage(getString(R.string.pt_delete_payment_message, Fmt.money(p.amount, currency)))
+                .setPositiveButton(getString(R.string.pt_delete), (dialog, which) -> {
                     PatientManager.deletePayment(this, patientId, p.id);
                     reload();
                 })
-                .setNegativeButton("إلغاء", null)
+                .setNegativeButton(getString(R.string.pt_cancel), null)
                 .show();
     }
 
-    // =====================================================================
-    // مساعد Phizyo AI (بسياق هذا المريض)
-    // =====================================================================
-
-    /** يفتح شاشة Phizyo AI مع تمرير معرّف المريض فقط (patient_id) - المساعد
-     *  بيجيب ملخص المريض بنفسه من PatientManager عند الحاجة (تشخيص، جلسات،
-     *  تطور الألم...) بدون اسمه أو هاتفه إطلاقًا؛ الاسم/الهاتف لا يُقرآن من
-     *  كائن Patient أصلًا في أي مسار تأريض، فمفيش أي احتمال تسريب حتى لو
-     *  الشاشة دي اتعدّلت لاحقًا. */
     private void askAiAboutThisPatient() {
         if (patient == null) return;
         Intent i = new Intent(this, AiAssistantActivity.class);
         i.putExtra("patient_id", patientId);
-        i.putExtra("prefill_query", "ساعدني أراجع حالة هذا المريض وأقترح خطوات العلاج القادمة المناسبة.");
+        i.putExtra("prefill_query", getString(R.string.pt_ai_prefill));
         startActivity(i);
         overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
     }
-
-    // =====================================================================
-    // اتصال ومشاركة
-    // =====================================================================
 
     private void openPhone(String scheme) {
         try {
             startActivity(new Intent(scheme.startsWith("tel") ? Intent.ACTION_DIAL : Intent.ACTION_SENDTO,
                     Uri.parse(scheme + Uri.encode(patient.phone.trim()))));
         } catch (ActivityNotFoundException e) {
-            Toast.makeText(this, "لا يوجد تطبيق مناسب على هذا الجهاز.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.pt_no_app, Toast.LENGTH_SHORT).show();
         }
     }
 
-    /** واتساب يحتاج رقمًا دوليًا؛ نقبل +962... أو 00962... فقط. */
     private void openWhatsApp() {
         String raw = patient.phone.trim().replace(" ", "").replace("-", "");
         String digits;
@@ -689,8 +701,7 @@ public class PatientDetailActivity extends AppCompatActivity {
         } else if (raw.startsWith("00")) {
             digits = raw.substring(2);
         } else {
-            Toast.makeText(this, "اكتب الرقم بصيغة دولية (مثل +9627XXXXXXXX) لفتح واتساب.",
-                    Toast.LENGTH_LONG).show();
+            Toast.makeText(this, R.string.pt_whatsapp_intl, Toast.LENGTH_LONG).show();
             return;
         }
         StringBuilder clean = new StringBuilder();
@@ -699,75 +710,81 @@ public class PatientDetailActivity extends AppCompatActivity {
             if (ch >= '0' && ch <= '9') clean.append(ch);
         }
         if (clean.length() < 7) {
-            Toast.makeText(this, "رقم الهاتف غير صالح لواتساب.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.pt_whatsapp_invalid, Toast.LENGTH_SHORT).show();
             return;
         }
         try {
             startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/" + clean)));
         } catch (ActivityNotFoundException e) {
-            Toast.makeText(this, "تعذر فتح واتساب.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.pt_whatsapp_failed, Toast.LENGTH_SHORT).show();
         }
     }
 
     private void shareSummary() {
         if (patient == null) return;
         StringBuilder sb = new StringBuilder();
-        sb.append("ملف المريض: ").append(patient.displayName()).append('\n');
-        if (patient.age > 0) sb.append("العمر: ").append(patient.age).append(" سنة\n");
-        if (!patient.gender.isEmpty()) sb.append("الجنس: ").append(patient.gender).append('\n');
-        if (!patient.diagnosis.trim().isEmpty()) sb.append("الشكوى/التشخيص: ").append(patient.diagnosis.trim()).append('\n');
-        sb.append("عدد الجلسات: ").append(patient.sessions.size()).append('\n');
+        sb.append(getString(R.string.pt_share_header, patient.displayName())).append('\n');
+        if (patient.age > 0) sb.append(getString(R.string.pt_share_age, patient.age)).append('\n');
+        if (!patient.gender.isEmpty()) sb.append(getString(R.string.pt_share_gender, patient.gender)).append('\n');
+        if (!patient.diagnosis.trim().isEmpty()) {
+            sb.append(getString(R.string.pt_share_diagnosis, patient.diagnosis.trim())).append('\n');
+        }
+        sb.append(getString(R.string.pt_share_sessions_count, patient.sessions.size())).append('\n');
         double drop = patient.averagePainDrop();
-        if (drop > -999) sb.append("متوسط انخفاض الألم: ").append(String.format(Locale.US, "%.1f", drop)).append('\n');
+        if (drop > -999) {
+            sb.append(getString(R.string.pt_share_pain_avg, String.format(Locale.US, "%.1f", drop))).append('\n');
+        }
 
         List<Patient.Session> list = patient.sessionsNewestFirst();
         if (!list.isEmpty()) {
-            sb.append("\nآخر الجلسات:\n");
+            sb.append('\n').append(getString(R.string.pt_share_last_sessions)).append('\n');
             int n = Math.min(10, list.size());
             for (int i = 0; i < n; i++) {
                 Patient.Session s = list.get(i);
                 sb.append("• ").append(Fmt.date(s.date));
                 if (!s.protocol.trim().isEmpty()) sb.append(" — ").append(s.protocol.trim());
-                if (s.hasPain()) sb.append(" — الألم ").append(s.painBefore).append("←").append(s.painAfter);
+                if (s.hasPain()) sb.append(getString(R.string.pt_share_pain_item, s.painBefore, s.painAfter));
                 if (s.durationMin > 0) sb.append(" — ").append(Fmt.minutes(s.durationMin));
                 sb.append('\n');
             }
         }
 
         if (patient.totalCharged() > 0 || patient.totalPaid() > 0) {
-            sb.append("\nالحساب:\n");
-            sb.append("• إجمالي الجلسات: ").append(Fmt.money(patient.totalCharged(), currency)).append('\n');
-            sb.append("• المدفوع: ").append(Fmt.money(patient.totalPaid(), currency)).append('\n');
+            sb.append('\n').append(getString(R.string.pt_share_account)).append('\n');
+            sb.append(getString(R.string.pt_share_total, Fmt.money(patient.totalCharged(), currency))).append('\n');
+            sb.append(getString(R.string.pt_share_paid, Fmt.money(patient.totalPaid(), currency))).append('\n');
             double balance = patient.balance();
-            if (balance > 0.004) sb.append("• المتبقي: ").append(Fmt.money(balance, currency)).append('\n');
-            else if (balance < -0.004) sb.append("• رصيد للمريض: ").append(Fmt.money(-balance, currency)).append('\n');
+            if (balance > 0.004) {
+                sb.append(getString(R.string.pt_share_remaining, Fmt.money(balance, currency))).append('\n');
+            } else if (balance < -0.004) {
+                sb.append(getString(R.string.pt_share_credit, Fmt.money(-balance, currency))).append('\n');
+            }
         }
         if (patient.hasSchedule()) {
-            sb.append("\nجدول الجلسات: ").append(patient.scheduleLabel()).append('\n');
+            sb.append('\n').append(getString(R.string.pt_share_schedule, patient.scheduleLabel())).append('\n');
         }
         String nextLabel = patient.nextAppointmentLabel(System.currentTimeMillis());
         if (!nextLabel.isEmpty()) {
-            sb.append("\nالموعد القادم: ").append(nextLabel).append('\n');
+            sb.append('\n').append(getString(R.string.pt_share_next, nextLabel)).append('\n');
         }
 
         Intent send = new Intent(Intent.ACTION_SEND);
         send.setType("text/plain");
-        send.putExtra(Intent.EXTRA_SUBJECT, "ملف المريض: " + patient.displayName());
+        send.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.pt_share_header, patient.displayName()));
         send.putExtra(Intent.EXTRA_TEXT, sb.toString().trim());
-        startActivity(Intent.createChooser(send, "مشاركة ملخص المريض"));
+        startActivity(Intent.createChooser(send, getString(R.string.pt_share_chooser)));
     }
 
     private void confirmDeletePatient() {
         new ClaudeDialog(this)
-                .setTitle("حذف المريض")
-                .setMessage("سيتم حذف ملف \"" + patient.displayName()
-                        + "\" بكل جلساته ودفعاته نهائيًا. هل أنت متأكد؟")
-                .setPositiveButton("حذف", (dialog, which) -> {
+                .setTitle(getString(R.string.pt_delete_patient_title))
+                .setMessage(getString(R.string.pt_delete_patient_message, patient.displayName()))
+                .setPositiveButton(getString(R.string.pt_delete), (dialog, which) -> {
                     PatientManager.deletePatient(this, patientId);
-                    Toast.makeText(this, "تم حذف المريض.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, R.string.pt_patient_deleted, Toast.LENGTH_SHORT).show();
                     finish();
                 })
-                .setNegativeButton("إلغاء", null)
+                .setNegativeButton(getString(R.string.pt_cancel), null)
                 .show();
     }
 }

@@ -110,51 +110,15 @@ final class EdgeTtsClient {
         return false;
     }
 
-    private static volatile String azKey = "";
-    private static volatile String azRegion = "";
-    private static volatile long azSkipUntil = 0L;
-
-    static void configureAzure(String key, String region) {
-        azKey = key == null ? "" : key.trim();
-        azRegion = region == null ? "" : region.trim().toLowerCase(Locale.ROOT);
-        azSkipUntil = 0L;
-    }
-
-    static boolean azureEnabled() {
-        return !azKey.isEmpty() && !azRegion.isEmpty();
-    }
-
-    private static boolean useAzure(String voice) {
-        return azureEnabled() && voice != null && !voice.startsWith("g-") && System.currentTimeMillis() >= azSkipUntil;
-    }
-
-    private static boolean azureFailed(IOException e) {
-        lastError = e.getMessage() == null ? "azure failed" : e.getMessage();
-        if (e instanceof ServiceException) {
-            int c = ((ServiceException) e).httpCode;
-            if (c == 401 || c == 403 || c == 429) azSkipUntil = System.currentTimeMillis() + 300_000L;
-        }
-        return true;
-    }
-
     static Result synthesize(String text, String voice) throws IOException {
         return synthesize(text, voice, Style.DEFAULT);
     }
 
     static Result synthesize(String text, String voice, Style style) throws IOException {
-        return synthesizeRuns(text, null, voice, style);
+        return GoogleTtsClient.synthesize(text, voice, style);
     }
 
     static Result synthesizeRuns(String text, List<Run> runs, String baseVoice, Style style) throws IOException {
-        if (useAzure(baseVoice)) {
-            try {
-                return AzureTtsClient.synthesize(text, runs, baseVoice, style, azKey, azRegion);
-            } catch (IOException e) {
-                azureFailed(e);
-                if (isNetworkFailure(e) && !(e instanceof ServiceException)) throw e;
-            }
-        }
-        if (runs == null || runs.size() < 2) return GoogleTtsClient.synthesize(text, baseVoice, style);
         return GoogleTtsClient.synthesizeRuns(text, runs, baseVoice, style);
     }
 }

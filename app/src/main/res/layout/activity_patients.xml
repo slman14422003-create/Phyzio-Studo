@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- شاشة المرضى: إحصائيات سريعة + بحث + ترتيب + قائمة ملفات -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -25,7 +24,7 @@
                 style="@style/Phizyo.HeaderTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="المرضى" />
+                android:text="@string/pt_title" />
 
             <TextView
                 android:id="@+id/header_subtitle"
@@ -52,75 +51,81 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
-                android:layout_marginTop="14dp"
+                android:layout_marginTop="12dp"
                 android:layout_marginEnd="16dp"
-                android:orientation="horizontal">
+                android:background="@drawable/bg_glass_card"
+                android:orientation="horizontal"
+                android:paddingTop="10dp"
+                android:paddingBottom="10dp">
 
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="4dp"
                     android:layout_weight="1"
-                    android:background="@drawable/bg_glass_card"
-                    android:orientation="vertical"
-                    android:padding="12dp">
+                    android:gravity="center"
+                    android:orientation="vertical">
 
                     <TextView
                         android:id="@+id/stat_patients"
                         style="@style/Phizyo.StatValue"
-                        android:layout_width="match_parent"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content" />
 
                     <TextView
                         style="@style/Phizyo.Caption"
-                        android:layout_width="match_parent"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="مريض" />
+                        android:text="@string/pt_stat_patients" />
                 </LinearLayout>
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="match_parent"
+                    android:background="@color/glass_border_soft" />
 
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:layout_marginEnd="4dp"
                     android:layout_weight="1"
-                    android:background="@drawable/bg_glass_card"
-                    android:orientation="vertical"
-                    android:padding="12dp">
+                    android:gravity="center"
+                    android:orientation="vertical">
 
                     <TextView
                         android:id="@+id/stat_sessions"
                         style="@style/Phizyo.StatValue"
-                        android:layout_width="match_parent"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content" />
 
                     <TextView
                         style="@style/Phizyo.Caption"
-                        android:layout_width="match_parent"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="جلسة هذا الشهر" />
+                        android:text="@string/pt_stat_month_sessions" />
                 </LinearLayout>
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="match_parent"
+                    android:background="@color/glass_border_soft" />
 
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
                     android:layout_weight="1"
-                    android:background="@drawable/bg_glass_card"
-                    android:orientation="vertical"
-                    android:padding="12dp">
+                    android:gravity="center"
+                    android:orientation="vertical">
 
                     <TextView
                         android:id="@+id/stat_dues"
                         style="@style/Phizyo.StatValue"
-                        android:layout_width="match_parent"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content" />
 
                     <TextView
                         style="@style/Phizyo.Caption"
-                        android:layout_width="match_parent"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="مستحقات" />
+                        android:text="@string/pt_stat_dues" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -150,18 +155,28 @@
                         android:id="@+id/sort_recent"
                         style="@style/Phizyo.Chip"
                         android:layout_marginEnd="8dp"
-                        android:text="الأحدث" />
+                        android:minHeight="38dp"
+                        android:text="@string/pt_sort_recent" />
+
+                    <TextView
+                        android:id="@+id/sort_next"
+                        style="@style/Phizyo.Chip"
+                        android:layout_marginEnd="8dp"
+                        android:minHeight="38dp"
+                        android:text="@string/pt_sort_next" />
 
                     <TextView
                         android:id="@+id/sort_name"
                         style="@style/Phizyo.Chip"
                         android:layout_marginEnd="8dp"
-                        android:text="الاسم" />
+                        android:minHeight="38dp"
+                        android:text="@string/pt_sort_name" />
 
                     <TextView
                         android:id="@+id/sort_dues"
                         style="@style/Phizyo.Chip"
-                        android:text="الأعلى مستحقات" />
+                        android:minHeight="38dp"
+                        android:text="@string/pt_sort_dues" />
                 </LinearLayout>
             </HorizontalScrollView>
 
@@ -171,7 +186,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="40dp"
-                android:text="لا يوجد مرضى مطابقون لبحثك."
+                android:text="@string/pt_no_results"
                 android:textAlignment="center"
                 android:visibility="gone" />
 
@@ -208,8 +223,8 @@
             android:layout_height="52dp"
             android:layout_gravity="bottom|end"
             android:layout_margin="20dp"
-            android:contentDescription="إضافة مريض جديد"
-            android:text="مريض جديد"
+            android:contentDescription="@string/pt_add_patient_desc"
+            android:text="@string/pt_new_patient"
             android:textAllCaps="false"
             android:textColor="@color/white"
             android:textSize="14sp"

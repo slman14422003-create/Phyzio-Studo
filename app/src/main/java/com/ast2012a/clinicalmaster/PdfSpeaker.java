@@ -133,49 +133,12 @@ final class PdfSpeaker {
     private static final int DEVICE_LAG_MS = 140;
 
     /** أصوات الأونلاين: {اللغة, اسم الصوت, الوصف}. الأول لكل لغة هو الافتراضي. */
-    private static final String[][] GOOGLE_VOICES = {
+    private static final String[][] CLOUD_VOICES = {
             {"ar", "g-ar", "Google · عربي"},
             {"en", "g-en", "Google · English"},
             {"fr", "g-fr", "Google · Français"},
             {"tr", "g-tr", "Google · Türkçe"},
     };
-
-    private static final String[][] AZURE_VOICES = {
-            {"ar", "ar-SA-ZariyahNeural", "زارية · سعودية · أنثى"},
-            {"ar", "ar-SA-HamedNeural", "حامد · سعودي · ذكر"},
-            {"ar", "ar-SY-AmanyNeural", "أماني · سورية · أنثى"},
-            {"ar", "ar-SY-LaithNeural", "ليث · سوري · ذكر"},
-            {"ar", "ar-EG-SalmaNeural", "سلمى · مصرية · أنثى"},
-            {"ar", "ar-EG-ShakirNeural", "شاكر · مصري · ذكر"},
-            {"ar", "ar-JO-SanaNeural", "سناء · أردنية · أنثى"},
-            {"ar", "ar-JO-TaimNeural", "تيم · أردني · ذكر"},
-            {"ar", "ar-LB-LaylaNeural", "ليلى · لبنانية · أنثى"},
-            {"ar", "ar-LB-RamiNeural", "رامي · لبناني · ذكر"},
-            {"ar", "ar-AE-FatimaNeural", "فاطمة · إماراتية · أنثى"},
-            {"ar", "ar-AE-HamdanNeural", "حمدان · إماراتي · ذكر"},
-            {"ar", "ar-QA-AmalNeural", "أمل · قطرية · أنثى"},
-            {"ar", "ar-QA-MoazNeural", "معاذ · قطري · ذكر"},
-            {"ar", "ar-KW-NouraNeural", "نورة · كويتية · أنثى"},
-            {"ar", "ar-KW-FahedNeural", "فهد · كويتي · ذكر"},
-            {"en", "en-US-EmmaMultilingualNeural", "Emma · أمريكية · أنثى"},
-            {"en", "en-US-AndrewMultilingualNeural", "Andrew · أمريكي · ذكر"},
-            {"en", "en-US-AvaMultilingualNeural", "Ava · أمريكية · أنثى"},
-            {"en", "en-US-BrianMultilingualNeural", "Brian · أمريكي · ذكر"},
-            {"en", "en-US-AriaNeural", "Aria · أمريكية · أنثى"},
-            {"en", "en-US-GuyNeural", "Guy · أمريكي · ذكر"},
-            {"en", "en-GB-SoniaNeural", "Sonia · بريطانية · أنثى"},
-            {"en", "en-GB-RyanNeural", "Ryan · بريطاني · ذكر"},
-            {"fr", "fr-FR-VivienneMultilingualNeural", "Vivienne · أنثى"},
-            {"fr", "fr-FR-RemyMultilingualNeural", "Rémy · ذكر"},
-            {"fr", "fr-FR-DeniseNeural", "Denise · أنثى"},
-            {"fr", "fr-FR-HenriNeural", "Henri · ذكر"},
-            {"tr", "tr-TR-EmelNeural", "Emel · أنثى"},
-            {"tr", "tr-TR-AhmetNeural", "Ahmet · ذكر"},
-    };
-
-    private static String[][] voices() {
-        return EdgeTtsClient.azureEnabled() ? AZURE_VOICES : GOOGLE_VOICES;
-    }
 
     /** صوت جملة واحدة جاهز للتشغيل (أو null عند الفشل). */
     private static final class CloudAudio {
@@ -292,7 +255,6 @@ final class PdfSpeaker {
         this.audio = (AudioManager) app.getSystemService(Context.AUDIO_SERVICE);
         try {
             String eng0 = prefs.getString(KEY_ENGINE, "cloud");
-            EdgeTtsClient.configureAzure(prefs.getString("azure_key", ""), prefs.getString("azure_region", ""));
             EdgeTtsClient.warmUp();
         } catch (Throwable ignored) {
         }
@@ -1231,7 +1193,7 @@ final class PdfSpeaker {
     }
 
     private static boolean isMaleVoice(String voiceName) {
-        for (String[] v : voices()) {
+        for (String[] v : CLOUD_VOICES) {
             if (v[1].equals(voiceName)) return v[2].contains("ذكر");
         }
         return false;
@@ -1243,7 +1205,7 @@ final class PdfSpeaker {
         String saved = prefs.getString("cvoice_" + runLang, null);
         if (saved != null && !badCloudVoices.contains(saved)) return saved;
         boolean male = isMaleVoice(baseVoice);
-        for (String[] v : voices()) {
+        for (String[] v : CLOUD_VOICES) {
             if (v[0].equals(runLang) && !badCloudVoices.contains(v[1]) && v[2].contains("ذكر") == male) return v[1];
         }
         return cloudVoiceFor(runLang);
@@ -1258,7 +1220,30 @@ final class PdfSpeaker {
     }
 
     boolean isCloudEngine() {
-        return true;
+        return !"device".equals(getEngineMode());
+    }
+
+    String getEngineMode() {
+        return "device".equals(prefs.getString(KEY_ENGINE, "cloud")) ? "device" : "cloud";
+    }
+
+    void setEngineMode(String mode) {
+        prefs.edit().putString(KEY_ENGINE, "device".equals(mode) ? "device" : "cloud").apply();
+        if (isCloudEngine()) {
+            try {
+                EdgeTtsClient.warmUp();
+            } catch (Throwable ignored) {
+            }
+        }
+        cloudBroken = false;
+        cloudActive = false;
+        badCloudVoices.clear();
+        badVoices.clear();
+        usedVoice.clear();
+        lastAppliedLang = null;
+        cloudVoiceSwitches = 0;
+        resetCloud();
+        if (state != State.IDLE) restartFromCurrentPoint();
     }
 
 
@@ -1267,29 +1252,9 @@ final class PdfSpeaker {
         return ".mp3";
     }
 
-    String getAzureKey() {
-        return prefs.getString("azure_key", "");
-    }
-
-    String getAzureRegion() {
-        return prefs.getString("azure_region", "");
-    }
-
-    void setAzure(String key, String region) {
-        prefs.edit().putString("azure_key", key == null ? "" : key.trim())
-                .putString("azure_region", region == null ? "" : region.trim()).apply();
-        EdgeTtsClient.configureAzure(getAzureKey(), getAzureRegion());
-        cloudBroken = false;
-        cloudActive = false;
-        badCloudVoices.clear();
-        cloudVoiceSwitches = 0;
-        resetCloud();
-        if (state != State.IDLE) restartFromCurrentPoint();
-    }
-
     List<VoiceOption> listCloudVoices(String lang) {
         List<VoiceOption> out = new ArrayList<>();
-        for (String[] v : voices()) {
+        for (String[] v : CLOUD_VOICES) {
             if (v[0].equals(lang)) out.add(new VoiceOption(v[1], v[2]));
         }
         return out;
@@ -1319,11 +1284,11 @@ final class PdfSpeaker {
     private String pickCloudVoice(String lang) {
         String saved = prefs.getString("cvoice_" + lang, null);
         if (saved != null && !badCloudVoices.contains(saved)) {
-            for (String[] v : voices()) {
+            for (String[] v : CLOUD_VOICES) {
                 if (v[0].equals(lang) && v[1].equals(saved)) return saved;
             }
         }
-        for (String[] v : voices()) {
+        for (String[] v : CLOUD_VOICES) {
             if (v[0].equals(lang) && !badCloudVoices.contains(v[1])) return v[1];
         }
         return null;
@@ -1332,10 +1297,10 @@ final class PdfSpeaker {
     private String cloudVoiceFor(String lang) {
         String v = pickCloudVoice(lang);
         if (v != null) return v;
-        for (String[] cv : voices()) {
+        for (String[] cv : CLOUD_VOICES) {
             if (cv[0].equals(lang)) return cv[1];
         }
-        return EdgeTtsClient.azureEnabled() ? "en-US-EmmaMultilingualNeural" : "g-en";
+        return "g-en";
     }
 
     private boolean useCloud() {
@@ -1877,7 +1842,7 @@ final class PdfSpeaker {
                 if (!offline && runs == null && rr != null && rr.audio != null && rr.audio.length >= 200 && rr.durationMs > 0
                         && isVoiceLearning()) {
                     LocalVoiceModel.learnNeural(c.lang, sent.length(), rr.durationMs,
-                            voice.startsWith("ar-") ? style.arRatePct : 0);
+                            "g-ar".equals(voice) ? style.arRatePct : 0);
                 }
                 main.post(() -> onCloudResult(key, rr == null ? null : new CloudAudio(rr, spoken), gen, ee));
             });

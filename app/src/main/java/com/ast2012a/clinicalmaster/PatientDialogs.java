@@ -142,6 +142,12 @@ public final class PatientDialogs {
     public static void showSession(final Activity activity, final String patientId,
                                    final Patient.Session existing, String presetProtocol,
                                    final Runnable onSaved) {
+        showSession(activity, patientId, existing, presetProtocol, 0L, onSaved);
+    }
+
+    public static void showSession(final Activity activity, final String patientId,
+                                   final Patient.Session existing, String presetProtocol,
+                                   long presetDayStart, final Runnable onSaved) {
         final Patient patient = PatientManager.getPatient(activity, patientId);
         if (patient == null) return;
 
@@ -150,6 +156,20 @@ public final class PatientDialogs {
         if (!editing) {
             session.fee = patient.sessionFee;
             if (presetProtocol != null) session.protocol = presetProtocol;
+            if (presetDayStart > 0) {
+                java.util.Calendar day = java.util.Calendar.getInstance();
+                day.setTimeInMillis(presetDayStart);
+                java.util.Calendar time = java.util.Calendar.getInstance();
+                if (patient.sessionTimeMin >= 0) {
+                    time.set(java.util.Calendar.HOUR_OF_DAY, patient.sessionTimeMin / 60);
+                    time.set(java.util.Calendar.MINUTE, patient.sessionTimeMin % 60);
+                }
+                day.set(java.util.Calendar.HOUR_OF_DAY, time.get(java.util.Calendar.HOUR_OF_DAY));
+                day.set(java.util.Calendar.MINUTE, time.get(java.util.Calendar.MINUTE));
+                day.set(java.util.Calendar.SECOND, 0);
+                day.set(java.util.Calendar.MILLISECOND, 0);
+                session.date = day.getTimeInMillis();
+            }
         }
 
         View view = LayoutInflater.from(activity).inflate(R.layout.dialog_session, null);

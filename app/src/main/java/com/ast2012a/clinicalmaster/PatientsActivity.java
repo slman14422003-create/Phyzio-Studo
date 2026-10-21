@@ -11,6 +11,7 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -28,15 +29,14 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * شاشة "المرضى": إحصائيات سريعة، بحث، ترتيب، وبطاقة لكل مريض تعرض آخر
- * جلسة والموعد القادم والمستحقات مع اتصال سريع.
- */
 public class PatientsActivity extends AppCompatActivity {
 
     private static final int SORT_RECENT = 0;
     private static final int SORT_NAME = 1;
     private static final int SORT_DUES = 2;
+    private static final int SORT_NEXT = 3;
+
+    private static final long SEARCH_DEBOUNCE_MS = 180;
 
     private LinearLayout container;
     private View contentBox;
@@ -48,6 +48,7 @@ public class PatientsActivity extends AppCompatActivity {
     private TextView statSessions;
     private TextView statDues;
     private TextView sortRecent;
+    private TextView sortNext;
     private TextView sortName;
     private TextView sortDues;
     private TextInputEditText searchField;
@@ -57,13 +58,6 @@ public class PatientsActivity extends AppCompatActivity {
     private List<Patient> all = new ArrayList<>();
     private String currency = "";
 
-    // ملحوظة إصلاح "لاج" الكتابة في مربع البحث: كل ضغطة زر كانت تُعيد بناء
-    // كل صفوف القائمة فورًا (removeAllViews + inflate لكل مريض) على نفس
-    // اللحظة اللي يرسم فيها حرف الإدخال، فيتزاحم رسم لوحة المفاتيح مع إعادة
-    // بناء القائمة ويظهر تقطّع واضح خصوصًا مع الكتابة السريعة. الحل: تأخير
-    // بسيط (debounce) بحيث لا تُعاد القائمة إلا بعد توقف الكتابة فعليًا،
-    // بنفس أسلوب شريط بحث Claude.
-    private static final long SEARCH_DEBOUNCE_MS = 180;
     private final Handler searchHandler = new Handler(Looper.getMainLooper());
     private final Runnable renderListRunnable = this::renderList;
 
@@ -88,26 +82,24 @@ public class PatientsActivity extends AppCompatActivity {
         statSessions = findViewById(R.id.stat_sessions);
         statDues = findViewById(R.id.stat_dues);
         sortRecent = findViewById(R.id.sort_recent);
+        sortNext = findViewById(R.id.sort_next);
         sortName = findViewById(R.id.sort_name);
         sortDues = findViewById(R.id.sort_dues);
         searchField = findViewById(R.id.search_field);
 
-        ((android.widget.ImageView) emptyBox.findViewById(R.id.empty_icon)).setImageResource(R.drawable.ic_users);
-        ((TextView) emptyBox.findViewById(R.id.empty_title)).setText("لا يوجد مرضى بعد");
-        ((TextView) emptyBox.findViewById(R.id.empty_body)).setText(
-                "أنشئ ملفًا لكل مريض لتسجّل جلساته، وتتابع تحسن الألم، وتضبط حسابه المالي.");
+        ((ImageView) emptyBox.findViewById(R.id.empty_icon)).setImageResource(R.drawable.ic_users);
+        ((TextView) emptyBox.findViewById(R.id.empty_title)).setText(R.string.pt_empty_title);
+        ((TextView) emptyBox.findViewById(R.id.empty_body)).setText(R.string.pt_empty_body);
         TextView emptyAction = emptyBox.findViewById(R.id.empty_action);
-        emptyAction.setText("إضافة مريض");
+        emptyAction.setText(R.string.pt_add_patient);
         emptyAction.setOnClickListener(v -> openAddPatient());
 
         fab.setOnClickListener(v -> openAddPatient());
-        // تحسين انميشن: نفس دخول الزر العائم النابض (overshoot) المستخدم في
-        // الشاشة الرئيسية، بدل ما يظهر فجأة بلا أي حركة دخول.
         fab.setScaleX(0f);
         fab.setScaleY(0f);
         fab.animate().scaleX(1f).scaleY(1f).setStartDelay(200).setDuration(320)
                 .setInterpolator(new android.view.animation.OvershootInterpolator(1.6f)).start();
-        searchField.setHint("ابحث بالاسم أو الهاتف أو التشخيص");
+        searchField.setHint(R.string.pt_search_hint);
         searchField.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -125,6 +117,7 @@ public class PatientsActivity extends AppCompatActivity {
         });
 
         sortRecent.setOnClickListener(v -> setSort(SORT_RECENT));
+        sortNext.setOnClickListener(v -> setSort(SORT_NEXT));
         sortName.setOnClickListener(v -> setSort(SORT_NAME));
         sortDues.setOnClickListener(v -> setSort(SORT_DUES));
         updateSortChips();
@@ -138,8 +131,8 @@ public class PatientsActivity extends AppCompatActivity {
 
     private boolean onMenuItemClick(MenuItem item) {
         if (item.getItemId() == R.id.action_currency) {
-            PatientDialogs.showTextInput(this, "رمز العملة", "مثال: د.أ أو ₪ أو $",
-                    "يظهر بجانب المبالغ في ملفات المرضى. اتركه فارغًا لعرض الأرقام فقط.",
+            PatientDialogs.showTextInput(this, getString(R.string.pt_currency_title),
+                    getString(R.string.pt_currency_hint), getString(R.string.pt_currency_message),
                     currency, text -> {
                         PatientManager.setCurrency(this, text);
                         reload();
@@ -174,6 +167,7 @@ public class PatientsActivity extends AppCompatActivity {
 
     private void updateSortChips() {
         styleChip(sortRecent, sortMode == SORT_RECENT);
+        styleChip(sortNext, sortMode == SORT_NEXT);
         styleChip(sortName, sortMode == SORT_NAME);
         styleChip(sortDues, sortMode == SORT_DUES);
     }
@@ -182,10 +176,6 @@ public class PatientsActivity extends AppCompatActivity {
         chip.setBackgroundResource(selected ? R.drawable.bg_glass_chip_selected : R.drawable.bg_glass_chip);
         chip.setTextColor(getColor(selected ? R.color.white : R.color.text_secondary));
     }
-
-    // =====================================================================
-    // البيانات والعرض
-    // =====================================================================
 
     private void reload() {
         all = PatientManager.loadPatients(this);
@@ -200,7 +190,7 @@ public class PatientsActivity extends AppCompatActivity {
             headerSubtitle.setVisibility(View.GONE);
             return;
         }
-        headerSubtitle.setText(all.size() + " مريض");
+        headerSubtitle.setText(getString(R.string.pt_count, all.size()));
         headerSubtitle.setVisibility(View.VISIBLE);
         updateStats();
         renderList();
@@ -236,6 +226,7 @@ public class PatientsActivity extends AppCompatActivity {
         }
 
         final Collator collator = Collator.getInstance(Locale.forLanguageTag("ar"));
+        final long now = System.currentTimeMillis();
         Collections.sort(shown, new Comparator<Patient>() {
             @Override
             public int compare(Patient a, Patient b) {
@@ -244,6 +235,14 @@ public class PatientsActivity extends AppCompatActivity {
                         return collator.compare(a.displayName(), b.displayName());
                     case SORT_DUES:
                         return Double.compare(b.balance(), a.balance());
+                    case SORT_NEXT: {
+                        long na = a.effectiveNextAppointment(now);
+                        long nb = b.effectiveNextAppointment(now);
+                        if (na <= 0 && nb <= 0) return Long.compare(b.lastActivity(), a.lastActivity());
+                        if (na <= 0) return 1;
+                        if (nb <= 0) return -1;
+                        return Long.compare(na, nb);
+                    }
                     default:
                         return Long.compare(b.lastActivity(), a.lastActivity());
                 }
@@ -251,10 +250,7 @@ public class PatientsActivity extends AppCompatActivity {
         });
 
         container.removeAllViews();
-        for (Patient p : shown) container.addView(buildRow(p));
-        // تحسين انميشن: بطاقات المرضى كانت تظهر دفعة واحدة بدون أي حركة
-        // دخول (خلافًا لباقي شاشات القوائم في التطبيق) - نفس تأثير الدخول
-        // المتدرّج (fall/stagger) المستخدم في شاشة البحث الرئيسية والمحادثة.
+        for (Patient p : shown) container.addView(buildRow(p, now));
         container.setLayoutAnimation(
                 android.view.animation.AnimationUtils.loadLayoutAnimation(this, R.anim.layout_fall_stagger));
         container.scheduleLayoutAnimation();
@@ -264,8 +260,7 @@ public class PatientsActivity extends AppCompatActivity {
     private boolean matches(Patient p, String q, String qDigits) {
         if (DataManager.normalize(p.name).contains(q)) return true;
         if (DataManager.normalize(p.diagnosis).contains(q)) return true;
-        if (!qDigits.isEmpty() && digitsOnly(p.phone).contains(qDigits)) return true;
-        return false;
+        return !qDigits.isEmpty() && digitsOnly(p.phone).contains(qDigits);
     }
 
     private static String digitsOnly(String s) {
@@ -277,7 +272,18 @@ public class PatientsActivity extends AppCompatActivity {
         return sb.toString();
     }
 
-    private View buildRow(final Patient p) {
+    private String nextLabel(Patient p, long now) {
+        long t = p.effectiveNextAppointment(now);
+        if (t <= 0) return "";
+        int ahead = Fmt.daysBetween(now, t);
+        String day;
+        if (ahead == 0) day = getString(R.string.pt_today);
+        else if (ahead == 1) day = getString(R.string.pt_tomorrow);
+        else day = Fmt.dayDate(t);
+        return p.nextAppointmentHasTime(now) ? day + " · " + Fmt.time(t) : day;
+    }
+
+    private View buildRow(final Patient p, long now) {
         View row = inflater.inflate(R.layout.item_patient_row, container, false);
         ((TextView) row.findViewById(R.id.patient_avatar)).setText(Fmt.initial(p.name));
         ((TextView) row.findViewById(R.id.patient_name)).setText(BidiText.fix(p.displayName()));
@@ -291,18 +297,22 @@ public class PatientsActivity extends AppCompatActivity {
             subtitle.setVisibility(View.VISIBLE);
         }
 
-        long now = System.currentTimeMillis();
-        StringBuilder meta = new StringBuilder(Fmt.sessionsLabel(p.sessions.size()));
-        Patient.Session last = p.lastSession();
-        if (last != null) meta.append(" · آخر جلسة ").append(Fmt.relative(last.date, now));
-        if (p.nextAppointment > now) meta.append(" · الموعد ").append(Fmt.dayDate(p.nextAppointment));
-        if (p.hasSchedule()) meta.append(" · ").append(p.scheduleLabel());
-        ((TextView) row.findViewById(R.id.patient_meta)).setText(BidiText.fix(meta.toString()));
+        TextView next = row.findViewById(R.id.patient_next);
+        String label = nextLabel(p, now);
+        if (label.isEmpty()) {
+            next.setVisibility(View.GONE);
+        } else {
+            next.setText(BidiText.fix(label));
+            next.setVisibility(View.VISIBLE);
+        }
+
+        ((TextView) row.findViewById(R.id.patient_meta)).setText(
+                BidiText.fix(Fmt.sessionsLabel(p.sessions.size())));
 
         TextView due = row.findViewById(R.id.patient_due_badge);
         double balance = p.balance();
         if (balance > 0.004) {
-            due.setText(BidiText.fix("عليه " + Fmt.money(balance, currency)));
+            due.setText(BidiText.fix(getString(R.string.pt_owes, Fmt.money(balance, currency))));
             due.setVisibility(View.VISIBLE);
         } else {
             due.setVisibility(View.GONE);
@@ -330,7 +340,7 @@ public class PatientsActivity extends AppCompatActivity {
     private String subtitleOf(Patient p) {
         if (!p.diagnosis.trim().isEmpty()) return p.diagnosis.trim().replace('\n', ' ');
         StringBuilder sb = new StringBuilder();
-        if (p.age > 0) sb.append(p.age).append(" سنة");
+        if (p.age > 0) sb.append(getString(R.string.pt_age_years, p.age));
         if (!p.gender.isEmpty()) {
             if (sb.length() > 0) sb.append(" · ");
             sb.append(p.gender);
@@ -342,7 +352,7 @@ public class PatientsActivity extends AppCompatActivity {
         try {
             startActivity(new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(phone.trim()))));
         } catch (ActivityNotFoundException e) {
-            Toast.makeText(this, "لا يوجد تطبيق اتصال على هذا الجهاز.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.pt_no_dialer, Toast.LENGTH_SHORT).show();
         }
     }
 }
