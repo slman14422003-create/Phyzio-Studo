@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <application
         android:name=".ClinicalMasterApp"
@@ -84,6 +86,12 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/update_file_paths" />
         </provider>
+
+        <!-- تنزيل التحديث في الخلفية (خدمة أمامية بإشعار تقدّم) -->
+        <service
+            android:name=".UpdateDownloadService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
         <!-- تنبيه الصباح بمرضى جلسات اليوم: المنبّه اليومي + إعادة الجدولة بعد إعادة التشغيل/التحديث -->
         <receiver android:name=".SessionReminderReceiver" android:exported="false">

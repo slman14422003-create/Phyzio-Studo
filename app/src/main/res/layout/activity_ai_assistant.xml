@@ -198,15 +198,23 @@
         android:paddingEnd="12dp"
         android:paddingBottom="12dp">
 
-        <FrameLayout
+        <!-- إصلاح الواجهة المخربطة: كان composer_glow بارتفاع match_parent داخل FrameLayout
+             ارتفاعه wrap_content، فكان يتمدد ليملأ الشاشة كلها ويدفع المحادثة والحقل.
+             الآن RelativeLayout يربط الوهج بحدود الحقل نفسه (alignTop/alignBottom). -->
+        <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:clipChildren="false">
+            android:clipChildren="false"
+            android:clipToPadding="false">
 
         <View
             android:id="@+id/composer_glow"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_alignStart="@+id/composer"
+            android:layout_alignTop="@+id/composer"
+            android:layout_alignEnd="@+id/composer"
+            android:layout_alignBottom="@+id/composer"
             android:alpha="0"
             android:background="@drawable/bg_composer_glow" />
 
@@ -260,6 +268,6 @@
                 app:rippleColor="#30FFFFFF"
                 app:tint="@color/white" />
         </LinearLayout>
-        </FrameLayout>
+        </RelativeLayout>
     </LinearLayout>
 </LinearLayout>

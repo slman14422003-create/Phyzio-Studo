@@ -240,6 +240,14 @@ public final class Motion {
         }
         if (v instanceof RecyclerView) {
             RecyclerView rv = (RecyclerView) v;
+            // إضافة/حذف/تحريك العناصر بحركة أبطأ وأنعم (كانت الافتراضية سريعة وحادة)
+            RecyclerView.ItemAnimator ia = rv.getItemAnimator();
+            if (ia != null) {
+                ia.setAddDuration(340);
+                ia.setRemoveDuration(240);
+                ia.setMoveDuration(300);
+                ia.setChangeDuration(260);
+            }
             if (rv.getLayoutAnimation() == null) {
                 rv.setLayoutAnimation(AnimationUtils.loadLayoutAnimation(rv.getContext(), R.anim.layout_fall_stagger));
                 rv.scheduleLayoutAnimation();

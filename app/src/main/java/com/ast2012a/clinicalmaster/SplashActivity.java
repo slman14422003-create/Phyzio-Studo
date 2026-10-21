@@ -1,6 +1,5 @@
 package com.ast2012a.clinicalmaster;
 
-import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.content.Intent;
 import android.os.Bundle;
@@ -12,68 +11,77 @@ import android.view.animation.DecelerateInterpolator;
 import androidx.appcompat.app.AppCompatActivity;
 
 /**
- * شاشة splash بأسلوب Claude: نجمة برتقالية + اسم التطبيق في المنتصف، واسم
- * المطوّر (PT Slman) أسفل الشاشة. الحركة هادئة: النجمة تدور وتكبر قليلًا
- * أثناء ظهورها، ثم يظهر الاسم، ثم اسم المطوّر. بعد مهلة قصيرة تنتقل تلقائيًا
- * لـ MainActivity بتلاشي ناعم ولا ترجع لها أي ضغطة رجوع.
- *
- * ألوان الشاشة تتبع الوضع الليلي/النهاري (Theme.ClinicalMaster.Splash).
+ * شاشة splash: علامة التطبيق (نفس أيقونة التطبيق) تُرسم بالحركة — شارة تقفز، خط نبضة
+ * يُرسم، نجمة Semo AI تظهر مع موجة ضوء — ثم اسم التطبيق يصعد وحروفه تتقارب،
+ * ثم اسم المطوّر. بعد اكتمال الحركة تنتقل لـ MainActivity بتلاشي مع تكبير خفيف.
+ * ألوان الخلفية تتبع الوضع الليلي/النهاري (Theme.ClinicalMaster.Splash).
  */
 public class SplashActivity extends AppCompatActivity {
 
-    private static final long AUTO_NAVIGATE_DELAY_MS = 1200;
+    private static final long REVEAL_MS = 1700;
+    private static final long AUTO_NAVIGATE_DELAY_MS = 2250;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private Runnable navigateRunnable;
+    private SplashMarkView mark;
+    private boolean leaving;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash);
 
-        View logo = findViewById(R.id.splash_logo);
+        mark = findViewById(R.id.splash_mark);
         View title = findViewById(R.id.splash_title);
         View credit = findViewById(R.id.splash_credit);
+        final View root = findViewById(R.id.splash_root);
 
-        // النجمة: تدور من -60° إلى 0° مع تكبير 0.8 -> 1 وتلاشي
-        logo.setScaleX(0.8f);
-        logo.setScaleY(0.8f);
-        logo.setRotation(-60f);
-        ObjectAnimator logoAlpha = ObjectAnimator.ofFloat(logo, "alpha", 0f, 1f);
-        ObjectAnimator logoScaleX = ObjectAnimator.ofFloat(logo, "scaleX", 0.8f, 1f);
-        ObjectAnimator logoScaleY = ObjectAnimator.ofFloat(logo, "scaleY", 0.8f, 1f);
-        ObjectAnimator logoRotate = ObjectAnimator.ofFloat(logo, "rotation", -60f, 0f);
-        AnimatorSet entrance = new AnimatorSet();
-        entrance.playTogether(logoAlpha, logoScaleX, logoScaleY, logoRotate);
-        entrance.setDuration(700);
-        entrance.setInterpolator(new DecelerateInterpolator(1.6f));
-        entrance.start();
+        mark.play(REVEAL_MS);
 
-        fadeIn(title, 260, 500);
-        fadeIn(credit, 520, 500);
-        fadeIn(findViewById(R.id.splash_pulse), 640, 600);
+        // الاسم: يصعد من أسفل وتتقارب حروفه
+        float dy = getResources().getDisplayMetrics().density * 18f;
+        title.setTranslationY(dy);
+        title.animate().alpha(1f).translationY(0f).setStartDelay(900).setDuration(650)
+                .setInterpolator(new DecelerateInterpolator(1.8f)).start();
+        if (title instanceof android.widget.TextView) {
+            ObjectAnimator sp = ObjectAnimator.ofFloat(title, "letterSpacing", 0.32f, 0.02f);
+            sp.setStartDelay(900);
+            sp.setDuration(900);
+            sp.setInterpolator(new DecelerateInterpolator(1.6f));
+            sp.start();
+        }
+
+        // اسم المطوّر
+        credit.setTranslationY(dy * 0.6f);
+        credit.animate().alpha(1f).translationY(0f).setStartDelay(1350).setDuration(550)
+                .setInterpolator(new DecelerateInterpolator()).start();
 
         navigateRunnable = this::goToMain;
         handler.postDelayed(navigateRunnable, AUTO_NAVIGATE_DELAY_MS);
-    }
-
-    private void fadeIn(View view, long delay, long duration) {
-        ObjectAnimator anim = ObjectAnimator.ofFloat(view, "alpha", 0f, 1f);
-        anim.setStartDelay(delay);
-        anim.setDuration(duration);
-        anim.start();
+        root.setOnClickListener(v -> {
+            handler.removeCallbacks(navigateRunnable);
+            goToMain();
+        });
     }
 
     private void goToMain() {
-        if (isFinishing()) return;
-        startActivity(new Intent(this, MainActivity.class));
-        overridePendingTransition(R.anim.splash_fade_in, R.anim.splash_fade_out);
-        finish();
+        if (isFinishing() || leaving) return;
+        leaving = true;
+        final View root = findViewById(R.id.splash_root);
+        root.animate().alpha(0f).scaleX(1.05f).scaleY(1.05f).setDuration(240)
+                .setInterpolator(new DecelerateInterpolator())
+                .withEndAction(() -> {
+                    if (isFinishing()) return;
+                    startActivity(new Intent(this, MainActivity.class));
+                    overridePendingTransition(R.anim.splash_fade_in, R.anim.splash_fade_out);
+                    finish();
+                }).start();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         if (navigateRunnable != null) handler.removeCallbacks(navigateRunnable);
+        if (mark != null) mark.stop();
     }
 }

@@ -70,7 +70,7 @@ final class UpdateManager {
 
     // مستودع الإصدارات (يجب أن يكون عامًا)
     private static final String OWNER = "slman14422003-create";
-    private static final String REPO = "AST-2012A";
+    private static final String REPO = "Phyzio-Studo";
     private static final String LATEST_URL =
             "https://api.github.com/repos/" + OWNER + "/" + REPO + "/releases/latest";
 
@@ -82,7 +82,7 @@ final class UpdateManager {
     private static final String KEY_PENDING_TAG = "pending_tag";
     private static final String KEY_PENDING_TIME = "pending_time";
     private static final long AUTO_INTERVAL_MS = 6L * 60 * 60 * 1000;
-    private static final long PENDING_GRACE_MS = 15L * 60 * 1000;
+    private static final long PENDING_GRACE_MS = 6L * 60 * 60 * 1000; // يبقى الملف الجاهز كي يعمل زر الإشعار لاحقًا
     private static final int MAX_SEGMENTS = 4;
     private static final long SEGMENT_MIN_BYTES = 2L * 1048576;
     static final String STATUS_CHECKING = "جارٍ التحقق…";
@@ -92,6 +92,9 @@ final class UpdateManager {
     private static boolean promptedThisRun = false;
     private static boolean busy = false;
     private static volatile boolean downloading = false;
+
+    static boolean isDownloading() { return downloading; }
+    static void setDownloading(boolean v) { downloading = v; }
 
     // ------------------------------------------------------------------ النتيجة
 
@@ -374,7 +377,7 @@ final class UpdateManager {
 
     // ------------------------------------------------------------ أدوات الواجهة
 
-    private static String mb(long bytes) {
+    static String mb(long bytes) {
         return String.format(Locale.US, "%.1f MB", bytes / 1048576.0);
     }
 
@@ -469,7 +472,10 @@ final class UpdateManager {
     // ------------------------------------------------------------ التنزيل والتثبيت
 
     private static void startUpdate(Activity activity, Result r) {
-        if (downloading) return;
+        if (downloading) {
+            android.widget.Toast.makeText(activity, "التحديث قيد التنزيل في الخلفية بالفعل", android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
                 && !activity.getPackageManager().canRequestPackageInstalls()) {
             new ClaudeDialog(activity)
@@ -489,138 +495,21 @@ final class UpdateManager {
         downloadAndInstall(activity, r);
     }
 
-    /** واجهة تقدّم التنزيل: المرحلة + النسبة + شريط + الحجم + السرعة والوقت المتبقي. */
-    private static final class ProgressUi {
-        final LinearLayout root;
-        final TextView stage, percent, sizes, speed;
-        final LinearProgressIndicator bar;
-        private boolean indeterminate = true;
-        private long lastT = 0, lastDone = 0;
-        private float ema = 0f;
-
-        ProgressUi(Context c) {
-            final int wrap = ViewGroup.LayoutParams.WRAP_CONTENT;
-            final int match = ViewGroup.LayoutParams.MATCH_PARENT;
-            final int secondary = c.getColor(R.color.text_secondary);
-            root = new LinearLayout(c);
-            root.setOrientation(LinearLayout.VERTICAL);
-            root.setPadding(0, dp(c, 4), 0, dp(c, 4));
-
-            LinearLayout top = new LinearLayout(c);
-            top.setOrientation(LinearLayout.HORIZONTAL);
-            top.setGravity(Gravity.CENTER_VERTICAL);
-            top.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
-            stage = label(c, "جارٍ تجهيز الملف…", 14f, secondary, true);
-            percent = label(c, "", 24f, c.getColor(R.color.primary_cyan), true);
-            top.addView(stage, new LinearLayout.LayoutParams(0, wrap, 1f));
-            top.addView(percent, new LinearLayout.LayoutParams(wrap, wrap));
-            root.addView(top, new LinearLayout.LayoutParams(match, wrap));
-
-            bar = new LinearProgressIndicator(c);
-            bar.setIndeterminate(true);
-            bar.setTrackThickness(dp(c, 8));
-            bar.setTrackCornerRadius(dp(c, 4));
-            bar.setIndicatorColor(c.getColor(R.color.primary_cyan));
-            bar.setTrackColor(c.getColor(R.color.primary_soft));
-            root.addView(bar, lp(match, wrap, 12, c));
-
-            LinearLayout bottom = new LinearLayout(c);
-            bottom.setOrientation(LinearLayout.HORIZONTAL);
-            bottom.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
-            sizes = label(c, "", 12.5f, secondary, false);
-            speed = label(c, "", 12.5f, secondary, false);
-            speed.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_END);
-            bottom.addView(sizes, new LinearLayout.LayoutParams(0, wrap, 1f));
-            bottom.addView(speed, new LinearLayout.LayoutParams(wrap, wrap));
-            root.addView(bottom, lp(match, wrap, 10, c));
-        }
-
-        private void setIndeterminate(boolean on) {
-            if (indeterminate == on) return;
-            indeterminate = on;
-            bar.setIndeterminate(on);
-        }
-
-        void update(int st, long done, long total) {
-            if (st == STAGE_PREPARE) {
-                stage.setText("جارٍ تجهيز الملف…");
-                setIndeterminate(true);
-                return;
-            }
-            if (st == STAGE_VERIFY) {
-                stage.setText("جارٍ التحقق من سلامة الملف…");
-                percent.setText("100%");
-                speed.setText("");
-                setIndeterminate(true);
-                return;
-            }
-            int pct = total > 0 ? (int) Math.min(100, done * 100 / total) : 0;
-            stage.setText("جارٍ التنزيل");
-            percent.setText(pct + "%");
-            setIndeterminate(false);
-            bar.setProgressCompat(pct, true);
-            sizes.setText(mb(done) + (total > 0 ? " / " + mb(total) : ""));
-
-            long now = SystemClock.uptimeMillis();
-            if (lastT == 0) {
-                lastT = now;
-                lastDone = done;
-            } else if (now - lastT >= 500) {
-                float inst = (done - lastDone) * 1000f / (now - lastT);
-                ema = ema == 0f ? inst : ema * 0.7f + inst * 0.3f;
-                lastT = now;
-                lastDone = done;
-            }
-            if (ema > 1024f) {
-                StringBuilder s = new StringBuilder(String.format(Locale.US, "%.1f MB/s", ema / 1048576f));
-                if (total > done) {
-                    long eta = (long) ((total - done) / ema);
-                    s.append("  ·  متبقي ").append(eta / 60).append(':')
-                            .append(String.format(Locale.US, "%02d", eta % 60));
-                }
-                speed.setText(s.toString());
-            }
-        }
-    }
-
+    /** يبدأ التنزيل في خدمة أمامية (Foreground Service): يستمر حتى لو خرج المستخدم من التطبيق. */
     private static void downloadAndInstall(Activity activity, Result r) {
-        final Context app = activity.getApplicationContext();
-        final AtomicBoolean cancelled = new AtomicBoolean(false);
-        final ProgressUi ui = new ProgressUi(activity);
-
-        final Dialog progress = new ClaudeDialog(activity)
-                .setTitle("تنزيل التحديث " + r.versionName)
-                .setView(ui.root)
-                .setNegativeButton("إلغاء", (dlg, w) -> cancelled.set(true))
-                .create();
-        progress.setCancelable(false);
-        progress.show();
-        downloading = true;
-
-        IO.execute(() -> {
+        if (Build.VERSION.SDK_INT >= 33
+                && activity.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            // بدون إذن الإشعارات لن يرى المستخدم التقدّم ولا زر التثبيت؛ نطلبه ثم نكمل التنزيل
             try {
-                File apk = download(app, r, cancelled,
-                        (st, done, total) -> MAIN.post(() -> ui.update(st, done, total)));
-                MAIN.post(() -> {
-                    downloading = false;
-                    dismissQuietly(progress);
-                    if (apk != null) install(activity, app, apk, r);
-                });
-            } catch (Exception e) {
-                clearDir(updatesDir(app));
-                final String reason = e.getMessage() == null ? "خطأ غير معروف" : e.getMessage();
-                MAIN.post(() -> {
-                    downloading = false;
-                    dismissQuietly(progress);
-                    if (cancelled.get() || activity.isFinishing() || activity.isDestroyed()) return;
-                    new ClaudeDialog(activity)
-                            .setTitle("تعذّر تنزيل التحديث")
-                            .setMessage(reason)
-                            .setPositiveButton("تمام", null)
-                            .show();
-                });
+                activity.requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 4711);
+            } catch (Exception ignored) {
             }
-        });
+        }
+        UpdateDownloadService.start(activity, r);
+        android.widget.Toast.makeText(activity,
+                "بدأ تنزيل التحديث في الخلفية — تقدر تكمل استخدام التطبيق وراح يوصلك إشعار عند الجاهزية",
+                android.widget.Toast.LENGTH_LONG).show();
     }
 
     private static void dismissQuietly(Dialog d) {
@@ -632,11 +521,11 @@ final class UpdateManager {
 
     // ------------------------------------------------------------ الملفات المؤقتة
 
-    private static File updatesDir(Context ctx) {
+    static File updatesDir(Context ctx) {
         return new File(ctx.getCacheDir(), "updates");
     }
 
-    private static void clearDir(File dir) {
+    static void clearDir(File dir) {
         File[] files = dir.listFiles();
         if (files == null) return;
         for (File f : files) //noinspection ResultOfMethodCallIgnored
@@ -652,6 +541,7 @@ final class UpdateManager {
         final Context ctx = ctxIn.getApplicationContext();
         IO.execute(() -> {
             try {
+                if (downloading) return; // لا نمسح ملفًا يُنزَّل الآن في الخلفية
                 File dir = updatesDir(ctx);
                 File[] files = dir.listFiles();
                 SharedPreferences sp = prefs(ctx);
@@ -683,7 +573,7 @@ final class UpdateManager {
     static final int STAGE_DOWNLOAD = 1;
     static final int STAGE_VERIFY = 2;
 
-    private interface Progress {
+    interface Progress {
         void onProgress(int stage, long done, long total);
     }
 
@@ -725,7 +615,7 @@ final class UpdateManager {
      * ويمنع تجزّؤ الملف أثناء الكتابة، ويسمح بتنزيل عدة أجزاء بالتوازي كل جزء في موضعه مباشرة.
      * بعد الاكتمال يتحقق من الحجم والبصمة. يرجع null لو أُلغي (ويحذف الملف المؤقت).
      */
-    private static File download(Context ctx, Result r, AtomicBoolean cancelled, Progress p) throws Exception {
+    static File download(Context ctx, Result r, AtomicBoolean cancelled, Progress p) throws Exception {
         File dir = updatesDir(ctx);
         if (!dir.exists() && !dir.mkdirs()) throw new IOException("تعذّر إنشاء مجلد التنزيل.");
         clearDir(dir);
@@ -934,6 +824,55 @@ final class UpdateManager {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    // ------------------------------------------------------ دعم الخدمة الخلفية
+
+    static android.os.Bundle toBundle(Result r) {
+        android.os.Bundle b = new android.os.Bundle();
+        b.putString("tag", r.tag);
+        b.putString("versionName", r.versionName);
+        b.putString("currentVersion", r.currentVersion);
+        b.putString("htmlUrl", r.htmlUrl);
+        b.putString("apkName", r.apkName);
+        b.putString("apkUrl", r.apkUrl);
+        b.putString("sumsUrl", r.sumsUrl);
+        b.putLong("apkSize", r.apkSize);
+        return b;
+    }
+
+    static Result fromBundle(android.os.Bundle b) {
+        Result r = new Result();
+        r.status = Result.AVAILABLE;
+        r.tag = b.getString("tag", "");
+        r.versionName = b.getString("versionName", "");
+        r.currentVersion = b.getString("currentVersion", "");
+        r.htmlUrl = b.getString("htmlUrl", "");
+        r.apkName = b.getString("apkName", "");
+        r.apkUrl = b.getString("apkUrl", "");
+        r.sumsUrl = b.getString("sumsUrl", "");
+        r.apkSize = b.getLong("apkSize", 0);
+        return r;
+    }
+
+    /** true لو ملف التحديث موقّع بمفتاح مختلف (سيرفضه أندرويد). */
+    static boolean signerMismatch(Context app, File apk) {
+        Boolean same = sameSigner(app, apk);
+        return same != null && !same;
+    }
+
+    /** Intent فتح مُثبّت النظام للملف المنزَّل، ويسجّل أن تثبيتًا جاريًا. */
+    static Intent buildInstallIntent(Context app, File apk, Result r) {
+        Uri uri = FileProvider.getUriForFile(app, app.getPackageName() + ".updates", apk);
+        prefs(app).edit().putString(KEY_PENDING_TAG, r.tag)
+                .putLong(KEY_PENDING_TIME, System.currentTimeMillis()).apply();
+        return new Intent(Intent.ACTION_VIEW)
+                .setDataAndType(uri, "application/vnd.android.package-archive")
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+    }
+
+    static String releasesUrl(Result r) {
+        return r.htmlUrl.isEmpty() ? "https://github.com/" + OWNER + "/" + REPO + "/releases" : r.htmlUrl;
     }
 
     // ------------------------------------------------------------------ التثبيت
