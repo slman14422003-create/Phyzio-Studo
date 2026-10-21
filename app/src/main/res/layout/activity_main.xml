@@ -74,7 +74,7 @@
         android:layout_height="0dp"
         android:layout_weight="1">
 
-        <!-- حالة فارغة: ترحيب + عمليات بحث سابقة + أمثلة -->
+        <!-- الشاشة الرئيسية: تحية + مساعد + مرضى اليوم + وصول سريع + أمثلة بحث -->
         <ScrollView
             android:id="@+id/empty_hint_container"
             android:layout_width="match_parent"
@@ -85,63 +85,96 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="center_horizontal"
-                android:minHeight="360dp"
                 android:orientation="vertical"
-                android:paddingStart="22dp"
-                android:paddingTop="32dp"
-                android:paddingEnd="22dp"
+                android:paddingStart="16dp"
+                android:paddingTop="20dp"
+                android:paddingEnd="16dp"
                 android:paddingBottom="24dp">
 
-                <FrameLayout
-                    android:layout_width="96dp"
-                    android:layout_height="96dp"
-                    android:background="@drawable/bg_hero_halo">
-
-                    <ImageView
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:layout_gravity="center"
-                        android:importantForAccessibility="no"
-                        android:src="@drawable/ic_sparkle"
-                        android:tint="@color/claude_orange" />
-                </FrameLayout>
-
-                <!-- عبارة الترحيب المتغيّرة (يعبّئها MainActivity من GreetingProvider) -->
-                <TextView
-                    android:id="@+id/empty_hint_title"
+                <!-- التحية + التاريخ -->
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:fontFamily="serif"
-                    android:gravity="center"
-                    android:lineSpacingExtra="4dp"
-                    android:text="بماذا تفكر؟"
-                    android:textColor="@color/text_primary"
-                    android:textDirection="rtl"
-                    android:textSize="26sp" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp">
 
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/home_date"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textAlignment="viewStart"
+                            android:textColor="@color/text_tertiary"
+                            android:textDirection="rtl"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/empty_hint_title"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:fontFamily="serif"
+                            android:lineSpacingExtra="3dp"
+                            android:text="بماذا تفكر؟"
+                            android:textAlignment="viewStart"
+                            android:textColor="@color/text_primary"
+                            android:textDirection="rtl"
+                            android:textSize="24sp" />
+                    </LinearLayout>
+
+                    <FrameLayout
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:background="@drawable/bg_hero_halo">
+
+                        <ImageView
+                            android:layout_width="26dp"
+                            android:layout_height="26dp"
+                            android:layout_gravity="center"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/ic_sparkle"
+                            android:tint="@color/claude_orange" />
+                    </FrameLayout>
+                </LinearLayout>
+
+                <!-- المساعد الذكي -->
                 <TextView
-                    android:id="@+id/empty_hint"
+                    android:id="@+id/btn_ai_assistant"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:gravity="center"
-                    android:lineSpacingExtra="4dp"
-                    android:text="ابحث عن أي حالة، نمط، أو مشكلة تقنية للحصول على التوصيف الدقيق."
-                    android:textColor="@color/text_secondary"
+                    android:layout_height="64dp"
+                    android:layout_marginTop="18dp"
+                    android:background="@drawable/bg_ai_card"
+                    android:clickable="true"
+                    android:drawableStart="@drawable/ic_sparkle"
+                    android:drawableEnd="@drawable/ic_chevron_end"
+                    android:drawablePadding="14dp"
+                    android:drawableTint="@color/white"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="18dp"
+                    android:stateListAnimator="@animator/press_scale_xy"
+                    android:text="اسأل Semo AI"
+                    android:textAlignment="viewStart"
+                    android:textColor="@color/white"
                     android:textDirection="rtl"
-                    android:textSize="14.5sp" />
+                    android:textSize="16.5sp"
+                    android:textStyle="bold" />
 
-                <!-- بطاقة "المرضى": دائمة الظهور أعلى شاشة الترحيب، المرضى مرتّبون
-                     حسب المواعيد (اليوم أولًا ثم القادم) - يعبّئها
-                     MainActivity.loadPatientsPreview(). -->
+                <!-- بطاقة المرضى (تعبّأ من MainActivity.loadPatientsPreview) -->
                 <LinearLayout
                     android:id="@+id/today_patients_card"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp"
-                    android:background="@drawable/bg_glass_card_pressed"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/bg_tile"
                     android:clickable="true"
                     android:focusable="true"
                     android:orientation="vertical"
@@ -154,24 +187,31 @@
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <ImageView
-                            android:layout_width="18dp"
-                            android:layout_height="18dp"
-                            android:importantForAccessibility="no"
-                            android:src="@drawable/ic_users"
-                            android:tint="@color/primary_cyan" />
+                        <FrameLayout
+                            android:layout_width="30dp"
+                            android:layout_height="30dp"
+                            android:background="@drawable/bg_icon_tint_soft">
+
+                            <ImageView
+                                android:layout_width="16dp"
+                                android:layout_height="16dp"
+                                android:layout_gravity="center"
+                                android:importantForAccessibility="no"
+                                android:src="@drawable/ic_users"
+                                android:tint="@color/primary_cyan_dark" />
+                        </FrameLayout>
 
                         <TextView
                             android:id="@+id/today_patients_title"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
+                            android:layout_marginStart="10dp"
                             android:layout_weight="1"
                             android:text="المرضى"
                             android:textAlignment="viewStart"
                             android:textColor="@color/text_primary"
                             android:textDirection="rtl"
-                            android:textSize="15sp"
+                            android:textSize="15.5sp"
                             android:textStyle="bold" />
 
                         <ImageView
@@ -189,6 +229,106 @@
                         android:orientation="vertical" />
                 </LinearLayout>
 
+                <!-- وصول سريع -->
+                <TextView
+                    style="@style/Phizyo.HomeSection"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="وصول سريع" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="0dp"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/btn_patients"
+                        style="@style/Phizyo.HomeTile"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:drawableStart="@drawable/ic_users"
+                        android:text="المرضى" />
+
+                    <Space android:layout_width="10dp" android:layout_height="match_parent" />
+
+                    <TextView
+                        android:id="@+id/btn_schedule"
+                        style="@style/Phizyo.HomeTile"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:drawableStart="@drawable/ic_calendar"
+                        android:text="الجدول" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/btn_my_cases"
+                        style="@style/Phizyo.HomeTile"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:drawableStart="@drawable/ic_folder"
+                        android:text="حالاتي" />
+
+                    <Space android:layout_width="10dp" android:layout_height="match_parent" />
+
+                    <TextView
+                        android:id="@+id/btn_treatment_programs"
+                        style="@style/Phizyo.HomeTile"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:drawableStart="@drawable/ic_clipboard"
+                        android:text="برامج العلاج" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/btn_favorites"
+                        style="@style/Phizyo.HomeTile"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:drawableStart="@drawable/ic_star_stroke"
+                        android:text="المفضلة" />
+
+                    <Space android:layout_width="10dp" android:layout_height="match_parent" />
+
+                    <TextView
+                        android:id="@+id/btn_pdf_reader"
+                        style="@style/Phizyo.HomeTile"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:drawableStart="@drawable/ic_pdf"
+                        android:text="قارئ PDF" />
+
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/btn_user_guide"
+                    style="@style/Phizyo.HomeTile"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:drawableStart="@drawable/ic_manual"
+                    android:text="دليل الاستخدام" />
+
                 <LinearLayout
                     android:id="@+id/recent_searches_container"
                     android:layout_width="match_parent"
@@ -197,16 +337,10 @@
                     android:visibility="gone">
 
                     <TextView
+                        style="@style/Phizyo.HomeSection"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="28dp"
-                        android:layout_marginBottom="10dp"
-                        android:text="عمليات بحث سابقة"
-                        android:textAlignment="viewStart"
-                        android:textColor="@color/text_tertiary"
-                        android:textDirection="rtl"
-                        android:textSize="13sp"
-                        android:textStyle="bold" />
+                        android:text="عمليات بحث سابقة" />
 
                     <HorizontalScrollView
                         android:layout_width="match_parent"
@@ -222,44 +356,46 @@
                 </LinearLayout>
 
                 <TextView
+                    style="@style/Phizyo.HomeSection"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="28dp"
-                    android:layout_marginBottom="10dp"
-                    android:text="جرّب أحد هذه الأمثلة"
-                    android:textAlignment="viewStart"
-                    android:textColor="@color/text_tertiary"
-                    android:textDirection="rtl"
-                    android:textSize="13sp"
-                        android:textStyle="bold" />
+                    android:text="جرّب البحث عن" />
 
-                <TextView
-                    android:id="@+id/chip_suggestion_1"
-                    style="@style/SuggestionRow"
+                <HorizontalScrollView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="عرق النسا" />
+                    android:clipToPadding="false"
+                    android:scrollbars="none">
 
-                <TextView
-                    android:id="@+id/chip_suggestion_2"
-                    style="@style/SuggestionRow"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="الكتف المتجمد" />
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
 
-                <TextView
-                    android:id="@+id/chip_suggestion_3"
-                    style="@style/SuggestionRow"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="النفق الرسغي" />
+                        <TextView
+                            android:id="@+id/chip_suggestion_1"
+                            style="@style/Phizyo.Chip"
+                            android:layout_marginEnd="8dp"
+                            android:text="عرق النسا" />
 
-                <TextView
-                    android:id="@+id/chip_suggestion_4"
-                    style="@style/SuggestionRow"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="اسفل الظهر" />
+                        <TextView
+                            android:id="@+id/chip_suggestion_2"
+                            style="@style/Phizyo.Chip"
+                            android:layout_marginEnd="8dp"
+                            android:text="الكتف المتجمد" />
+
+                        <TextView
+                            android:id="@+id/chip_suggestion_3"
+                            style="@style/Phizyo.Chip"
+                            android:layout_marginEnd="8dp"
+                            android:text="النفق الرسغي" />
+
+                        <TextView
+                            android:id="@+id/chip_suggestion_4"
+                            style="@style/Phizyo.Chip"
+                            android:text="اسفل الظهر" />
+                    </LinearLayout>
+                </HorizontalScrollView>
             </LinearLayout>
         </ScrollView>
 
@@ -462,87 +598,6 @@
             android:layout_height="1dp"
             android:layout_marginBottom="10dp"
             android:background="@color/glass_border_soft" />
-
-        <HorizontalScrollView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="10dp"
-            android:clipToPadding="false"
-            android:fadingEdgeLength="28dp"
-            android:requiresFadingEdge="horizontal"
-            android:scrollbars="none">
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp">
-
-                <TextView
-                    android:id="@+id/btn_ai_assistant"
-                    style="@style/Phizyo.NavChip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/bg_chip_accent"
-                    android:drawableStart="@drawable/ic_sparkle"
-                    android:drawableTint="@color/white"
-                    android:text="Semo AI"
-                    android:textColor="@color/white"
-                    android:textDirection="ltr"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/btn_patients"
-                    style="@style/Phizyo.NavChip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:drawableStart="@drawable/ic_users"
-                    android:text="المرضى" />
-
-                <TextView
-                    android:id="@+id/btn_favorites"
-                    style="@style/Phizyo.NavChip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:drawableStart="@drawable/ic_star_stroke"
-                    android:text="المفضلة" />
-
-                <TextView
-                    android:id="@+id/btn_my_cases"
-                    style="@style/Phizyo.NavChip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:drawableStart="@drawable/ic_folder"
-                    android:text="حالاتي" />
-
-
-                <TextView
-                    android:id="@+id/btn_user_guide"
-                    style="@style/Phizyo.NavChip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:drawableStart="@drawable/ic_manual"
-                    android:text="دليل الاستخدام" />
-
-
-                <TextView
-                    android:id="@+id/btn_treatment_programs"
-                    style="@style/Phizyo.NavChip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:drawableStart="@drawable/ic_clipboard"
-                    android:text="برامج العلاج" />
-
-                <TextView
-                    android:id="@+id/btn_pdf_reader"
-                    style="@style/Phizyo.NavChip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:drawableStart="@drawable/ic_pdf"
-                    android:text="قارئ PDF" />
-            </LinearLayout>
-        </HorizontalScrollView>
 
         <!-- شريط البحث: زر "+" دائري + حقل بحث كبسولة (مثل شريط Claude) -->
         <LinearLayout

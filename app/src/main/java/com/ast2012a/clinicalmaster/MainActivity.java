@@ -85,6 +85,8 @@ public class MainActivity extends AppCompatActivity {
         // الترحيبية (بأسلوب Claude) بدل النص الثابت القديم.
         TextView heroTitle = findViewById(R.id.empty_hint_title);
         if (heroTitle != null) heroTitle.setText(GreetingProvider.randomGreeting());
+        TextView homeDate = findViewById(R.id.home_date);
+        if (homeDate != null) homeDate.setText(Fmt.dayDate(System.currentTimeMillis()));
 
         searchField = findViewById(R.id.search_field);
         emptyHintContainer = findViewById(R.id.empty_hint_container);
@@ -129,6 +131,9 @@ public class MainActivity extends AppCompatActivity {
         TextView patientsBtn = findViewById(R.id.btn_patients);
         patientsBtn.setOnClickListener(v -> navigateTo(PatientsActivity.class));
 
+        TextView scheduleBtn = findViewById(R.id.btn_schedule);
+        scheduleBtn.setOnClickListener(v -> navigateTo(ScheduleActivity.class));
+
         TextView treatmentProgramsBtn = findViewById(R.id.btn_treatment_programs);
         treatmentProgramsBtn.setOnClickListener(v -> navigateTo(TreatmentProgramsActivity.class));
 
@@ -142,7 +147,7 @@ public class MainActivity extends AppCompatActivity {
         // تحسين انميشن: كبسولات التنقل السفلية بقت تدي إحساس ضغط فعلي
         // (تصغير خفيف + نبضة رجوع) بدل ما تعتمد بس على تغيير لون الخلفية.
         for (View chip : new View[]{favoritesBtn, myCasesBtn, userGuideBtn,
-                patientsBtn, treatmentProgramsBtn, pdfReaderBtn, aiBtn}) {
+                patientsBtn, scheduleBtn, treatmentProgramsBtn, pdfReaderBtn, aiBtn}) {
             Ui.applyPressFeedback(chip);
         }
 

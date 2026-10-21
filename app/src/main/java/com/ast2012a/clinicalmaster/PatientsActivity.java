@@ -26,8 +26,10 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class PatientsActivity extends AppCompatActivity {
 
@@ -54,10 +56,11 @@ public class PatientsActivity extends AppCompatActivity {
     private TextInputEditText searchField;
     private LayoutInflater inflater;
 
-    private int sortMode = SORT_RECENT;
+    private int sortMode = SORT_NEXT;
     private List<Patient> all = new ArrayList<>();
     private String currency = "";
-    private boolean scheduleExpanded = true;
+    /** جلسات اليوم: معرّف المريض ← وقت الجلسة بالدقائق (-1 = بدون ساعة). */
+    private final Map<String, Integer> todayMinutes = new HashMap<>();
 
     private final Handler searchHandler = new Handler(Looper.getMainLooper());
     private final Runnable renderListRunnable = this::renderList;
@@ -131,6 +134,10 @@ public class PatientsActivity extends AppCompatActivity {
     }
 
     private boolean onMenuItemClick(MenuItem item) {
+        if (item.getItemId() == R.id.action_schedule) {
+            openSchedule();
+            return true;
+        }
         if (item.getItemId() == R.id.action_currency) {
             PatientDialogs.showTextInput(this, getString(R.string.pt_currency_title),
                     getString(R.string.pt_currency_hint), getString(R.string.pt_currency_message),
@@ -147,6 +154,12 @@ public class PatientsActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         reload();
+    }
+
+    private void openSchedule() {
+        if (Ui.isDoubleClick()) return;
+        startActivity(new Intent(this, ScheduleActivity.class));
+        overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
     }
 
     private void openAddPatient() {
@@ -181,6 +194,10 @@ public class PatientsActivity extends AppCompatActivity {
     private void reload() {
         all = PatientManager.loadPatients(this);
         currency = PatientManager.getCurrency(this);
+        todayMinutes.clear();
+        for (SessionReminder.Entry e : SessionReminder.patientsToday(this, System.currentTimeMillis())) {
+            if (e.id != null) todayMinutes.put(e.id, e.minutes);
+        }
 
         boolean empty = all.isEmpty();
         contentBox.setVisibility(empty ? View.GONE : View.VISIBLE);
@@ -250,68 +267,77 @@ public class PatientsActivity extends AppCompatActivity {
             }
         });
 
+        // في ترتيب "الأقرب موعدًا": جلسات اليوم أولًا (بحسب الساعة) ثم الباقي
+        if (sortMode == SORT_NEXT) {
+            Collections.sort(shown, new Comparator<Patient>() {
+                @Override
+                public int compare(Patient a, Patient b) {
+                    Integer ta = todayMinutes.get(a.id);
+                    Integer tb = todayMinutes.get(b.id);
+                    if (ta != null && tb != null) {
+                        int x = ta < 0 ? Integer.MAX_VALUE : ta;
+                        int y = tb < 0 ? Integer.MAX_VALUE : tb;
+                        return Integer.compare(x, y);
+                    }
+                    if (ta != null) return -1;
+                    if (tb != null) return 1;
+                    return 0;
+                }
+            });
+        }
+
         container.removeAllViews();
-        if (!shown.isEmpty()) container.addView(buildScheduleTable(shown));
-        for (Patient p : shown) container.addView(buildRow(p, now));
+        if (q.isEmpty()) container.addView(buildScheduleBanner());
+
+        int lastGroup = -1;
+        for (Patient p : shown) {
+            if (sortMode == SORT_NEXT) {
+                int g = groupOf(p, now);
+                if (g != lastGroup) {
+                    lastGroup = g;
+                    container.addView(buildSection(g, countGroup(shown, g, now)));
+                }
+            }
+            container.addView(buildRow(p, now));
+        }
         container.setLayoutAnimation(
                 android.view.animation.AnimationUtils.loadLayoutAnimation(this, R.anim.layout_fall_stagger));
         container.scheduleLayoutAnimation();
         noResults.setVisibility(!all.isEmpty() && shown.isEmpty() ? View.VISIBLE : View.GONE);
     }
 
-    private View buildScheduleTable(List<Patient> shown) {
-        View card = inflater.inflate(R.layout.item_schedule_table, container, false);
-        final View body = card.findViewById(R.id.schedule_body);
-        final View chevron = card.findViewById(R.id.schedule_chevron);
-        WeeklyScheduleView grid = card.findViewById(R.id.schedule_grid);
-        LinearLayout rows = card.findViewById(R.id.schedule_rows);
-
-        List<Patient> noTime = new ArrayList<>();
-        boolean any = false;
-        for (Patient p : shown) {
-            if (!p.hasSchedule()) continue;
-            if (p.sessionTimeMin < 0) noTime.add(p);
-            else any = true;
-        }
-        grid.setPatients(shown);
-        grid.setOnEntryClick(this::openPatient);
-        grid.setVisibility(any ? View.VISIBLE : View.GONE);
-        card.findViewById(R.id.schedule_empty).setVisibility(any || !noTime.isEmpty() ? View.GONE : View.VISIBLE);
-
-        for (final Patient p : noTime) {
-            View row = inflater.inflate(R.layout.item_schedule_row, rows, false);
-            ((TextView) row.findViewById(R.id.sched_name)).setText(BidiText.fix(p.displayName()));
-            ((TextView) row.findViewById(R.id.sched_days)).setText(BidiText.fix(scheduleDays(p)));
-            ((TextView) row.findViewById(R.id.sched_time)).setText(scheduleTime(p));
-            row.setOnClickListener(v -> openPatient(p));
-            rows.addView(row);
-        }
-        card.findViewById(R.id.schedule_notime_box).setVisibility(noTime.isEmpty() ? View.GONE : View.VISIBLE);
-
-        body.setVisibility(scheduleExpanded ? View.VISIBLE : View.GONE);
-        chevron.setRotation(scheduleExpanded ? 180f : 0f);
-        card.findViewById(R.id.schedule_header).setOnClickListener(v -> {
-            scheduleExpanded = !scheduleExpanded;
-            body.setVisibility(scheduleExpanded ? View.VISIBLE : View.GONE);
-            chevron.animate().rotation(scheduleExpanded ? 180f : 0f).setDuration(180).start();
-        });
-        return card;
+    private int groupOf(Patient p, long now) {
+        if (todayMinutes.containsKey(p.id)) return 0;
+        return p.effectiveNextAppointment(now) > 0 ? 1 : 2;
     }
 
-    private String scheduleDays(Patient p) {
-        if (!p.hasSchedule()) return getString(R.string.pt_sched_none);
-        StringBuilder sb = new StringBuilder();
-        for (int dow : Patient.WEEK_ORDER) {
-            if (!p.hasSessionDay(dow)) continue;
-            if (sb.length() > 0) sb.append(getString(R.string.pt_sched_days_sep));
-            sb.append(Fmt.dayName(dow));
-        }
-        return sb.toString();
+    private int countGroup(List<Patient> list, int g, long now) {
+        int n = 0;
+        for (Patient p : list) if (groupOf(p, now) == g) n++;
+        return n;
     }
 
-    private String scheduleTime(Patient p) {
-        if (!p.hasSchedule() || p.sessionTimeMin < 0) return getString(R.string.pt_sched_none);
-        return Fmt.minutesToTime(p.sessionTimeMin);
+    private View buildSection(int group, int count) {
+        View v = inflater.inflate(R.layout.item_patient_section, container, false);
+        String title = group == 0 ? "اليوم" : group == 1 ? "القادمون" : "بدون موعد";
+        ((TextView) v.findViewById(R.id.section_title)).setText(title);
+        ((TextView) v.findViewById(R.id.section_count)).setText(String.valueOf(count));
+        return v;
+    }
+
+    private View buildScheduleBanner() {
+        View b = inflater.inflate(R.layout.item_schedule_banner, container, false);
+        int today = todayMinutes.size();
+        String sub;
+        if (today == 0) sub = "عرض جلسات الأسبوع";
+        else if (today == 1) sub = "جلسة واحدة اليوم · عرض الأسبوع";
+        else if (today == 2) sub = "جلستان اليوم · عرض الأسبوع";
+        else if (today <= 10) sub = today + " جلسات اليوم · عرض الأسبوع";
+        else sub = today + " جلسة اليوم · عرض الأسبوع";
+        ((TextView) b.findViewById(R.id.banner_sub)).setText(sub);
+        b.setOnClickListener(v -> openSchedule());
+        Ui.applyPressFeedback(b);
+        return b;
     }
 
     private void openPatient(Patient p) {
@@ -337,6 +363,11 @@ public class PatientsActivity extends AppCompatActivity {
     }
 
     private String nextLabel(Patient p, long now) {
+        Integer tm = todayMinutes.get(p.id);
+        if (tm != null) {
+            return tm >= 0 ? getString(R.string.pt_today) + " · " + Fmt.minutesToTime(tm)
+                    : getString(R.string.pt_today);
+        }
         long t = p.effectiveNextAppointment(now);
         if (t <= 0) return "";
         int ahead = Fmt.daysBetween(now, t);
@@ -368,6 +399,14 @@ public class PatientsActivity extends AppCompatActivity {
         } else {
             next.setText(BidiText.fix(label));
             next.setVisibility(View.VISIBLE);
+        }
+        boolean isToday = todayMinutes.containsKey(p.id);
+        next.setBackgroundResource(isToday ? R.drawable.bg_pill_primary : R.drawable.bg_capsule_soft);
+        next.setTextColor(getColor(isToday ? R.color.white : R.color.primary_cyan_dark));
+        TextView avatar = row.findViewById(R.id.patient_avatar);
+        if (isToday) {
+            avatar.setBackgroundResource(R.drawable.bg_avatar_gradient);
+            avatar.setTextColor(getColor(R.color.white));
         }
 
         ((TextView) row.findViewById(R.id.patient_meta)).setText(

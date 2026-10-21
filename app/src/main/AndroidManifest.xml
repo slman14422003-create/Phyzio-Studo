@@ -45,6 +45,7 @@
         <activity android:name=".FavoritesActivity" android:exported="false" />
         <activity android:name=".UserGuideActivity" android:exported="false" />
         <activity android:name=".PatientsActivity" android:exported="false" />
+        <activity android:name=".ScheduleActivity" android:exported="false" />
         <activity android:name=".AddEditPatientActivity" android:exported="false" />
         <activity android:name=".PatientDetailActivity" android:exported="false" />
         <activity android:name=".TreatmentProgramsActivity" android:exported="false" />
