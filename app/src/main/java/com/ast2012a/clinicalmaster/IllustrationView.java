@@ -118,7 +118,7 @@ public class IllustrationView extends View {
     }
 
     @Override
-    protected void onVisibilityAggregated(boolean isVisible) {
+    public void onVisibilityAggregated(boolean isVisible) {
         super.onVisibilityAggregated(isVisible);
         if (isVisible) startAnim();
         else stopAnim();
