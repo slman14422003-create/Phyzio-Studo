@@ -1,0 +1,398 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ============================================================================
+     شاشة سياسة الخصوصية — إعادة تصميم بأسلوب Claude: رأس ترحيبي بأيقونة درع،
+     ثم كل قسم في بطاقة مدوّرة (أيقونة + عنوان + نص). النص نفسه لم يتغيّر.
+     ============================================================================ -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_app_gradient"
+    android:orientation="vertical">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        style="@style/Phizyo.Toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        app:navigationIcon="@drawable/ic_arrow_back"
+        app:title="سياسة الخصوصية" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="16dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="28dp">
+
+            <!-- رأس ترحيبي -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="22dp"
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:paddingTop="12dp">
+
+                <ImageView
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_shield"
+                    android:tint="@color/claude_orange" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:fontFamily="serif"
+                    android:gravity="center"
+                    android:text="بياناتك تبقى على جهازك"
+                    android:textColor="@color/text_primary"
+                    android:textDirection="rtl"
+                    android:textSize="25sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center"
+                    android:lineSpacingExtra="3dp"
+                    android:text="Phizyo Studio يعمل محليًا أولًا؛ النسخ السحابي اختياري بالكامل."
+                    android:textColor="@color/text_secondary"
+                    android:textDirection="rtl"
+                    android:textSize="14.5sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_settings_group"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_info"
+                        android:tint="@color/primary_cyan" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:text="نظرة عامة"
+                        android:textAlignment="viewStart"
+                        android:textColor="@color/text_primary"
+                        android:textDirection="rtl"
+                        android:textSize="17sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:lineSpacingExtra="5dp"
+                    android:text="Phizyo Studio تطبيق يعمل محليًا على جهازك بالدرجة الأولى - كل حالة، مريض، برنامج علاج، أو محادثة تحفظها تبقى مخزَّنة على جهازك أولًا. الاستثناء الوحيد هو النسخ الاحتياطي السحابي لملفات المرضى، وهو معطَّل افتراضيًا ولا يعمل إلا إذا فعّلته أنت بنفسك من الإعدادات (انظر بطاقة &quot;النسخ الاحتياطي السحابي&quot; أدناه)."
+                    android:textAlignment="viewStart"
+                    android:textColor="@color/text_secondary"
+                    android:textDirection="rtl"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_settings_group"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_smartphone"
+                        android:tint="@color/primary_cyan" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:text="البيانات المحفوظة محليًا"
+                        android:textAlignment="viewStart"
+                        android:textColor="@color/text_primary"
+                        android:textDirection="rtl"
+                        android:textSize="17sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:lineSpacingExtra="5dp"
+                    android:text="•  الحالات السريرية المخصّصة التي تضيفها.&#10;•  بيانات المرضى الأساسية (اسم، تواصل، ملاحظات) اللي تدخلها بنفسك.&#10;•  برامج العلاج الفيزيائي المحفوظة.&#10;•  سجل محادثة Semo AI.&#10;•  تفضيلاتك (الوضع الليلي/النهاري، المفضّلة، تعليمات Semo AI المخصّصة).&#10;&#10;كل ما سبق مخزَّن في تخزين التطبيق الخاص على جهازك، ويُحذف نهائيًا لو حذفت التطبيق أو مسحت بياناته من إعدادات النظام."
+                    android:textAlignment="viewStart"
+                    android:textColor="@color/text_secondary"
+                    android:textDirection="rtl"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_settings_group"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_wifi"
+                        android:tint="@color/primary_cyan" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:text="متى يتصل التطبيق بالإنترنت؟"
+                        android:textAlignment="viewStart"
+                        android:textColor="@color/text_primary"
+                        android:textDirection="rtl"
+                        android:textSize="17sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:lineSpacingExtra="5dp"
+                    android:text="فقط عند استخدامك لـ Semo AI أو البحث عن خلفية معرفية إضافية. في هذه الحالة، جهازك يتصل مباشرة (بدون وسيط من عندنا) بواحد من اثنين:&#10;&#10;•  Physiopedia حصرًا (مرجع علاج طبيعي متخصص - بحث معرفي عام بدون أي مفتاح أو تسجيل، وبدون أي بحث خارج هذا النطاق).&#10;•  رابط Cloudflare Worker واحد ثابت خاص بمساعد Semo AI، مبني داخل التطبيق نفسه وغير قابل للتغيير من الإعدادات.&#10;&#10;نص سؤالك، وآخر رسائل نفس محادثتك (كسياق قصير المدى يساعد المساعد يفهم إشاراتك)، هما اللي يُرسلان لهذه الجهات لتوليد الرد؛ لا تُرسل أي بيانات مريض أو ملف شخصي بشكل تلقائي في الخلفية."
+                    android:textAlignment="viewStart"
+                    android:textColor="@color/text_secondary"
+                    android:textDirection="rtl"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_settings_group"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_cloud"
+                        android:tint="@color/primary_cyan" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:text="النسخ الاحتياطي السحابي (اختياري)"
+                        android:textAlignment="viewStart"
+                        android:textColor="@color/text_primary"
+                        android:textDirection="rtl"
+                        android:textSize="17sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:lineSpacingExtra="5dp"
+                    android:text="مُعطَّل افتراضيًا. لو فعّلته من الإعدادات، تُرفع ملفات مرضاك (الاسم، الهاتف، الجلسات، المدفوعات، الملاحظات) إلى قاعدة بيانات Firebase Firestore الخاصة بالتطبيق، مربوطة بمعرّف جهازك فقط (مصادقة مجهولة بدون اسم أو بريد). لا يمكن لأي مستخدم آخر الوصول لبياناتك، وتقدر توقف الميزة أو تحذف بياناتك السحابية في أي وقت من الإعدادات."
+                    android:textAlignment="viewStart"
+                    android:textColor="@color/text_secondary"
+                    android:textDirection="rtl"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_settings_group"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_cloud"
+                        android:tint="@color/primary_cyan" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:text="رابط Cloudflare Worker الثابت"
+                        android:textAlignment="viewStart"
+                        android:textColor="@color/text_primary"
+                        android:textDirection="rtl"
+                        android:textSize="17sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:lineSpacingExtra="5dp"
+                    android:text="مساعد Semo AI يعتمد على ووركر واحد فقط تم نشره على Cloudflare من قِبل فريق التطبيق، ولا يوجد أي مفتاح API أو مزوّد بديل. لا نملك وصولًا لأي بيانات شخصية تخصّك عبر هذا الووركر - فقط نص سؤالك والتعليمات المخصّصة اللي أضفتها بنفسك (لو وُجدت) وقت إرسال كل رسالة."
+                    android:textAlignment="viewStart"
+                    android:textColor="@color/text_secondary"
+                    android:textDirection="rtl"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_settings_group"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_ban"
+                        android:tint="@color/primary_cyan" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:text="لا إعلانات ولا تتبّع"
+                        android:textAlignment="viewStart"
+                        android:textColor="@color/text_primary"
+                        android:textDirection="rtl"
+                        android:textSize="17sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:lineSpacingExtra="5dp"
+                    android:text="التطبيق لا يعرض إعلانات، ولا يحتوي على أي مكتبة تتبّع أو تحليلات سلوك المستخدم (Analytics/Ads SDK)."
+                    android:textAlignment="viewStart"
+                    android:textColor="@color/text_secondary"
+                    android:textDirection="rtl"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_settings_group"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_message"
+                        android:tint="@color/primary_cyan" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:text="التواصل"
+                        android:textAlignment="viewStart"
+                        android:textColor="@color/text_primary"
+                        android:textDirection="rtl"
+                        android:textSize="17sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:lineSpacingExtra="5dp"
+                    android:text="لأي استفسار حول هذه السياسة أو التطبيق، تواصل مع فريق تطوير التطبيق مباشرة عبر قنوات الدعم المرفقة مع التطبيق."
+                    android:textAlignment="viewStart"
+                    android:textColor="@color/text_secondary"
+                    android:textDirection="rtl"
+                    android:textSize="15sp" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>
