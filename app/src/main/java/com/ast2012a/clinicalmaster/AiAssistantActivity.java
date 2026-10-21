@@ -1,0 +1,378 @@
+package com.ast2012a.clinicalmaster;
+
+import android.animation.ObjectAnimator;
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.animation.AnimationUtils;
+import android.view.animation.LayoutAnimationController;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.textfield.TextInputEditText;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+/**
+ * شاشة المساعد الذكي. تعمل دائمًا عبر رابط Cloudflare Worker الثابت
+ * المبني داخل التطبيق (AiClient.FIXED_WORKER_URL) - بدون أي إعداد أو
+ * مفتاح مطلوب من المستخدم.
+ *
+ * كل سؤال إكلينيكي يمر بمرحلتي تأريض (Grounding) قبل الوصول للنموذج، عشان
+ * تقل الهلوسة والإجابات المخترعة قدر الإمكان:
+ * 1) قاعدة بيانات الجهاز المحلية (البروتوكولات الموثقة لأنماط AST-2012A).
+ * 2) Physiopedia حصرًا (مرجع علاج طبيعي متخصص فقط) - بدون أي بحث عام
+ *    احتياطي خارج نطاق العلاج الطبيعي.
+ *
+ * ذاكرة المحادثة: كل رسالة بترسل ومعاها آخر رسائل نفس الجلسة كسياق قصير
+ * المدى (AiOrchestrator.answer(..., history, ...))، عشان لو المستخدم قال
+ * "بدي مريض" أو أي إشارة مختصرة، المساعد يفهمها بالرجوع للسياق اللي فات.
+ *
+ * أي إجابة استندت لمصدر (قاعدة الجهاز و/أو Physiopedia) تُعرض ومعها شارة
+ * مصدر شفافة قابلة للفتح.
+ */
+public class AiAssistantActivity extends AppCompatActivity {
+
+    private RecyclerView chatList;
+    private ChatAdapter adapter;
+    private TextInputEditText input;
+    private View typingIndicator;
+    private TextView typingText;
+    private View emptyState;
+    private LinearLayout quickPromptsRow;
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+
+    /** لو الشاشة اتفتحت من ملف مريض محدد ("اسأل Semo AI عن هذا المريض")،
+     *  بيتخزن معرّفه هنا عشان كل سؤال في المحادثة (بما فيها إعادة المحاولة)
+     *  يفضل مرفق معاه ملخص المريض المُعرَّف (بدون اسم/هاتف) تلقائيًا. */
+    private String contextPatientId;
+    private boolean requestInFlight;
+    private FloatingActionButton sendButton;
+
+    /** لو الشاشة اتفتحت من زر "اسأل الذكاء الاصطناعي عن هذا الملف" في قارئ
+     *  PDF (v12)، بيتخزنوا اسم الملف ونصه المستخرَج هنا عشان كل سؤال في
+     *  المحادثة يفضل مرفق معاه محتوى الملف تلقائيًا - راجع
+     *  AiOrchestrator.answer(documentName, documentText, ...). */
+    private String contextDocumentName;
+    private String contextDocumentText;
+
+    private static final String[] QUICK_PROMPTS = {
+            "اشرحلي الفرق بين TENS و EMS",
+            "بروتوكول مقترح لآلام أسفل الظهر",
+            "احتياطات السلامة العامة قبل أي جلسة",
+            "ما هو عرق النسا؟",
+    };
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_ai_assistant);
+
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        toolbar.setNavigationOnClickListener(v -> finish());
+        toolbar.inflateMenu(R.menu.menu_ai_assistant);
+        toolbar.setOnMenuItemClickListener(this::onMenuItemClick);
+
+        chatList = findViewById(R.id.chat_list);
+        input = findViewById(R.id.chat_input);
+        typingIndicator = findViewById(R.id.typing_indicator);
+        typingText = findViewById(R.id.typing_text);
+        emptyState = findViewById(R.id.empty_state);
+        quickPromptsRow = findViewById(R.id.quick_prompts_row);
+        FloatingActionButton sendBtn = findViewById(R.id.btn_send);
+        sendButton = sendBtn;
+
+        startSparkleSpin(findViewById(R.id.typing_sparkle));
+
+        adapter = new ChatAdapter(this::openSaveAsCase);
+        adapter.setOnRegenerateListener(this::regenerateAnswer);
+        LinearLayoutManager lm = new LinearLayoutManager(this);
+        chatList.setLayoutManager(lm);
+        chatList.setAdapter(adapter);
+        LayoutAnimationController controller =
+                AnimationUtils.loadLayoutAnimation(this, R.anim.layout_fall_stagger);
+        chatList.setLayoutAnimation(controller);
+
+        sendBtn.setOnClickListener(v -> onSendClicked());
+
+        // استرجاع سجل المحادثة المحفوظ محليًا (لو موجود) قبل أي شيء تاني
+        adapter.setMessages(AiChatStore.load(this));
+        if (adapter.getItemCount() > 0) {
+            chatList.scrollToPosition(adapter.getItemCount() - 1);
+        }
+
+        setupQuickPrompts();
+        refreshQuickPromptsVisibility();
+
+        String prefillQuery = getIntent().getStringExtra("prefill_query");
+        if (prefillQuery != null && !prefillQuery.isEmpty()) {
+            input.setText(prefillQuery);
+            input.setSelection(prefillQuery.length());
+        }
+
+        contextPatientId = getIntent().getStringExtra("patient_id");
+        contextDocumentName = getIntent().getStringExtra("document_name");
+        contextDocumentText = getIntent().getStringExtra("document_text");
+        bindContextBanner();
+    }
+
+    /** لو الشاشة مرتبطة بمريض محدد أو بمستند PDF مفتوح من القارئ (v12)،
+     *  بنعرض شريط توضيحي صغير أعلى المحادثة (نفس فكرة شارة المصدر) يفهم
+     *  المستخدم إن المساعد شايف سياق إضافي - بدون ذكر اسم المريض بالطبع،
+     *  مجرد تأكيد إن السياق مرفق. الحالتين متبادلتين (الشاشة بتتفتح إما من
+     *  ملف مريض أو من قارئ PDF، مش الاتنين مع بعض)، فبانر واحد قابل لإعادة
+     *  الاستخدام كفاية بدل تكرار Layout كامل لكل حالة. */
+    private void bindContextBanner() {
+        View banner = findViewById(R.id.ai_patient_context_banner);
+        if (banner == null) return;
+        boolean hasPatient = contextPatientId != null && !contextPatientId.isEmpty();
+        boolean hasDocument = contextDocumentText != null && !contextDocumentText.trim().isEmpty();
+
+        ImageView icon = findViewById(R.id.ai_context_banner_icon);
+        TextView text = findViewById(R.id.ai_context_banner_text);
+        if (hasDocument) {
+            if (icon != null) icon.setImageResource(R.drawable.ic_pdf);
+            if (text != null) {
+                String name = contextDocumentName != null && !contextDocumentName.trim().isEmpty()
+                        ? contextDocumentName.trim() : "مستند PDF";
+                text.setText("مستند \"" + name + "\" مرفق بهذه المحادثة");
+            }
+        } else if (hasPatient) {
+            if (icon != null) icon.setImageResource(R.drawable.ic_users);
+            if (text != null) text.setText("ملف المريض مرفق بهذه المحادثة (بدون الاسم أو رقم الهاتف)");
+        }
+        banner.setVisibility(hasDocument || hasPatient ? View.VISIBLE : View.GONE);
+    }
+
+    /** دوران مستمر بطيء لنجمة مؤشر التفكير (مثل نجمة Claude وهي تفكر). */
+    private void startSparkleSpin(View sparkle) {
+        if (sparkle == null) return;
+        ObjectAnimator anim = ObjectAnimator.ofFloat(sparkle, "rotation", 0f, 360f);
+        anim.setDuration(2400);
+        anim.setInterpolator(new android.view.animation.LinearInterpolator());
+        anim.setRepeatCount(ObjectAnimator.INFINITE);
+        anim.start();
+    }
+
+    /** صفوف اقتراحات سريعة (كبسولات بعرض كامل) تظهر فقط لما المحادثة تكون فاضية،
+     *  عشان توجّه المستخدم لأنواع الأسئلة اللي المساعد الذكي يقدر يساعد فيها. */
+    private void setupQuickPrompts() {
+        quickPromptsRow.removeAllViews();
+        for (String prompt : QUICK_PROMPTS) {
+            TextView row = new TextView(this);
+            row.setText(prompt);
+            row.setTextColor(getColor(R.color.text_primary));
+            row.setTextSize(14.5f);
+            row.setTextDirection(View.TEXT_DIRECTION_RTL);
+            row.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
+            row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            row.setBackgroundResource(R.drawable.bg_suggestion_row);
+            row.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_sparkle, 0, 0, 0);
+            row.setCompoundDrawableTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.claude_orange)));
+            row.setCompoundDrawablePadding(Ui.dp(this, 12));
+            row.setMinHeight(Ui.dp(this, 52));
+            row.setPadding(Ui.dp(this, 18), Ui.dp(this, 10), Ui.dp(this, 18), Ui.dp(this, 10));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            lp.bottomMargin = Ui.dp(this, 10);
+            row.setLayoutParams(lp);
+            row.setOnClickListener(v -> sendQuery(prompt, true));
+            Ui.applyPressFeedback(row);
+            quickPromptsRow.addView(row);
+        }
+    }
+
+    private void refreshQuickPromptsVisibility() {
+        emptyState.setVisibility(adapter.getItemCount() == 0 ? View.VISIBLE : View.GONE);
+    }
+
+    private boolean onMenuItemClick(MenuItem item) {
+        if (item.getItemId() == R.id.action_clear_chat) {
+            confirmClearChat();
+            return true;
+        }
+        return false;
+    }
+
+    private void confirmClearChat() {
+        if (adapter.getItemCount() == 0) return;
+        new ClaudeDialog(this)
+                .setTitle("مسح المحادثة")
+                .setMessage("هل تريد مسح كل سجل المحادثة مع Semo AI نهائيًا؟")
+                .setPositiveButton("مسح", (dialog, which) -> {
+                    adapter.clearAll();
+                    AiChatStore.clear(this);
+                    refreshQuickPromptsVisibility();
+                    Toast.makeText(this, "تم مسح المحادثة.", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("إلغاء", null)
+                .show();
+    }
+
+    private void onSendClicked() {
+        String text = input.getText() == null ? "" : input.getText().toString().trim();
+        if (text.isEmpty()) return;
+        sendQuery(text, true);
+    }
+
+    /** إعادة محاولة رد سابق: بيرسل نفس سؤال المستخدم الأصلي تاني بدون ما
+     *  يكرر فقاعة السؤال في المحادثة (already visible above). */
+    private void regenerateAnswer(String originalQuery) {
+        sendQuery(originalQuery, false);
+    }
+
+    /**
+     * المسار الموحّد لإرسال أي سؤال (سواء مكتوب يدويًا، من شريحة اقتراح
+     * سريع، أو إعادة محاولة). القرار كامل بين "دردشة طبيعية مباشرة" أو
+     * "بحث/تأريض ثم رد" بقى مسؤولية AiOrchestrator - والنموذج نفسه هو
+     * اللي يحسم الاختيار ده مش قاعدة ثابتة في الشاشة.
+     */
+    private void sendQuery(String text, boolean addUserBubble) {
+        if (text == null || text.trim().isEmpty()) return;
+        if (requestInFlight) return;
+
+        List<ChatMessage> historySnapshot = new ArrayList<>(adapter.getMessages());
+        if (!addUserBubble) {
+            while (!historySnapshot.isEmpty()
+                    && historySnapshot.get(historySnapshot.size() - 1).role == ChatMessage.ROLE_AI) {
+                historySnapshot.remove(historySnapshot.size() - 1);
+            }
+            while (!historySnapshot.isEmpty()
+                    && historySnapshot.get(historySnapshot.size() - 1).role == ChatMessage.ROLE_USER
+                    && text.equals(historySnapshot.get(historySnapshot.size() - 1).text)) {
+                historySnapshot.remove(historySnapshot.size() - 1);
+            }
+        }
+
+        if (addUserBubble) {
+            adapter.addMessage(new ChatMessage(ChatMessage.ROLE_USER, text));
+            AiChatStore.save(this, adapter.getMessages());
+            refreshQuickPromptsVisibility();
+            chatList.smoothScrollToPosition(adapter.getItemCount() - 1);
+            input.setText("");
+        }
+
+        setRequestInFlight(true);
+        setTypingStage(0);
+
+        executor.execute(() -> {
+            try {
+                AiOrchestrator.answer(this, text, contextPatientId,
+                contextDocumentName, contextDocumentText, historySnapshot,
+                new AiOrchestrator.StageListener() {
+                    @Override public void onClassifying() { runOnUiThread(() -> setTypingStage(0)); }
+                    @Override public void onSearching() { runOnUiThread(() -> setTypingStage(1)); }
+                    @Override public void onThinking() { runOnUiThread(() -> setTypingStage(2)); }
+                },
+                new AiOrchestrator.ResultCallback() {
+                    @Override
+                    public void onChatReply(String reply) {
+                        deliverReply(new ChatMessage(ChatMessage.ROLE_AI, reply, null, null, text));
+                    }
+
+                    @Override
+                    public void onGroundedReply(String reply, String sourceLabel, String sourceUrl) {
+                        deliverReply(new ChatMessage(ChatMessage.ROLE_AI, reply, sourceLabel, sourceUrl, text));
+                    }
+
+                    @Override
+                    public void onError(String message) {
+                        runOnUiThread(() -> {
+                            if (isFinishing() || isDestroyed()) return;
+                            setRequestInFlight(false);
+                            hideTypingIndicator();
+                            Toast.makeText(AiAssistantActivity.this, message, Toast.LENGTH_LONG).show();
+                        });
+                    }
+                });
+            } catch (RuntimeException e) {
+                runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    setRequestInFlight(false);
+                    hideTypingIndicator();
+                    Toast.makeText(AiAssistantActivity.this, R.string.ai_generic_error, Toast.LENGTH_LONG).show();
+                });
+            }
+        });
+    }
+
+    private void deliverReply(ChatMessage message) {
+        runOnUiThread(() -> {
+            if (isFinishing() || isDestroyed()) return;
+            setRequestInFlight(false);
+            hideTypingIndicator();
+            adapter.addMessage(message);
+            AiChatStore.save(AiAssistantActivity.this, adapter.getMessages());
+            chatList.smoothScrollToPosition(adapter.getItemCount() - 1);
+        });
+    }
+
+    private void setRequestInFlight(boolean inFlight) {
+        requestInFlight = inFlight;
+        if (sendButton != null) {
+            sendButton.setEnabled(!inFlight);
+            sendButton.setAlpha(inFlight ? 0.5f : 1f);
+        }
+    }
+
+    private void setTypingStage(int stage) {
+        if (typingIndicator.getVisibility() != View.VISIBLE) {
+            typingIndicator.animate().cancel();
+            typingIndicator.setAlpha(0f);
+            typingIndicator.setVisibility(View.VISIBLE);
+            typingIndicator.animate().alpha(1f).setDuration(180).start();
+        }
+        String label;
+        switch (stage) {
+            case 1:
+                label = getString(R.string.ai_stage_searching);
+                break;
+            case 2:
+                label = "يكتب الرد...";
+                break;
+            default:
+                label = "بيفهم قصدك...";
+        }
+        typingText.setText(label);
+    }
+
+    /** إخفاء مؤشر الكتابة بتدرّج ناعم (fade-out) بدل الاختفاء المفاجئ -
+     *  نفس روح تدرّج الظهور في setTypingStage. */
+    private void hideTypingIndicator() {
+        typingIndicator.animate().cancel();
+        typingIndicator.animate().alpha(0f).setDuration(150)
+                .withEndAction(() -> typingIndicator.setVisibility(View.GONE))
+                .start();
+    }
+
+    private void openSaveAsCase(String aiText) {
+        Intent i = new Intent(this, AddEditCaseActivity.class);
+        i.putExtra("prefill_explanation", aiText);
+        startActivity(i);
+        overridePendingTransition(R.anim.slide_up_in, R.anim.fade_out);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        executor.shutdownNow();
+    }
+
+    @Override
+    public void finish() {
+        super.finish();
+        overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
+    }
+}

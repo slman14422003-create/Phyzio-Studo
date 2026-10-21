@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- إضافة / تعديل حالة مخصصة — نموذج بأسلوب Claude: عناوين أقسام + بطاقات، وكل حقل باسمه فوقه -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_app_gradient"
+    android:orientation="vertical">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        style="@style/Phizyo.Toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        app:navigationIcon="@drawable/ic_close"
+        app:title="إضافة حالة جديدة" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:fillViewport="true"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="16dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="32dp">
+
+            <TextView
+                style="@style/Phizyo.FormSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="البيانات الأساسية" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_settings_group"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <TextView
+                    style="@style/Phizyo.FormLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="0dp"
+                    android:text="الكلمات المفتاحية *" />
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/f_keywords"
+                    style="@style/Phizyo.FormInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text|textCapSentences"
+                    android:hint="مفصولة بفواصل" />
+
+                <TextView
+                    style="@style/Phizyo.FormLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="عنوان الحالة *" />
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/f_title"
+                    style="@style/Phizyo.FormInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text|textCapSentences" />
+
+                <TextView
+                    style="@style/Phizyo.FormLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="النمط *" />
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/f_mode"
+                    style="@style/Phizyo.FormInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text|textCapSentences"
+                    android:hint="مثال: TENS / EMS" />
+            </LinearLayout>
+
+            <TextView
+                style="@style/Phizyo.FormSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="إعدادات الجهاز" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_settings_group"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <TextView
+                    style="@style/Phizyo.FormLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="0dp"
+                    android:text="التردد" />
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/f_freq"
+                    style="@style/Phizyo.FormInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text|textCapSentences" />
+
+                <TextView
+                    style="@style/Phizyo.FormLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="القناة" />
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/f_channel"
+                    style="@style/Phizyo.FormInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text|textCapSentences" />
+
+                <TextView
+                    style="@style/Phizyo.FormLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="المدة" />
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/f_duration"
+                    style="@style/Phizyo.FormInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text|textCapSentences" />
+
+                <TextView
+                    style="@style/Phizyo.FormLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="القطب الموجب (+)" />
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/f_pole_pos"
+                    style="@style/Phizyo.FormInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text|textCapSentences" />
+
+                <TextView
+                    style="@style/Phizyo.FormLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="القطب السالب (-)" />
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/f_pole_neg"
+                    style="@style/Phizyo.FormInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text|textCapSentences" />
+            </LinearLayout>
+
+            <TextView
+                style="@style/Phizyo.FormSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="المحتوى السريري" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_settings_group"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <TextView
+                    style="@style/Phizyo.FormLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="0dp"
+                    android:text="الشرح الإكلينيكي *" />
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/f_explanation"
+                    style="@style/Phizyo.FormInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textMultiLine|textCapSentences"
+                    android:gravity="top"
+                    android:minLines="4" />
+
+                <TextView
+                    style="@style/Phizyo.FormLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="الأعراض (اختياري)" />
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/f_symptoms"
+                    style="@style/Phizyo.FormInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textMultiLine|textCapSentences"
+                    android:gravity="top"
+                    android:minLines="3" />
+
+                <TextView
+                    style="@style/Phizyo.FormLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="خطة الجلسات (اختياري)" />
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/f_sessions_plan"
+                    style="@style/Phizyo.FormInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textMultiLine|textCapSentences"
+                    android:gravity="top"
+                    android:minLines="3" />
+
+                <TextView
+                    style="@style/Phizyo.FormLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="نصيحة (اختياري)" />
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/f_tip"
+                    style="@style/Phizyo.FormInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textMultiLine|textCapSentences"
+                    android:gravity="top"
+                    android:minLines="2" />
+            </LinearLayout>
+
+                <TextView
+                    android:id="@+id/btn_submit"
+                    style="@style/Phizyo.PillPrimary"
+                    android:layout_width="match_parent"
+                    android:layout_height="54dp"
+                    android:text="حفظ الحالة" />
+
+                <TextView
+                    android:id="@+id/btn_cancel"
+                    style="@style/Phizyo.PillSecondary"
+                    android:layout_width="match_parent"
+                    android:layout_height="54dp"
+                    android:text="إلغاء" />
+
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>
