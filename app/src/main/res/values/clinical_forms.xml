@@ -2,6 +2,7 @@
 <resources>
     <item name="tag_motion" type="id" />
     <item name="form_root" type="id" />
+    <item name="tag_breathe" type="id" />
 
     <string name="case_form_new">إضافة حالة جديدة</string>
     <string name="case_form_edit">تعديل الحالة</string>

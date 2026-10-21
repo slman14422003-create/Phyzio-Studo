@@ -30,6 +30,7 @@
             android:orientation="horizontal">
 
             <ImageView
+                android:id="@+id/toolbar_spark"
                 android:layout_width="18dp"
                 android:layout_height="18dp"
                 android:layout_marginEnd="8dp"
@@ -97,6 +98,11 @@
         android:layout_height="0dp"
         android:layout_weight="1">
 
+        <com.ast2012a.clinicalmaster.AmbientView
+            android:id="@+id/ai_ambient"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
         <!-- قائمة الرسائل (chat_list) -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/chat_list"
@@ -119,18 +125,16 @@
             android:paddingStart="24dp"
             android:paddingEnd="24dp">
 
-            <ImageView
-                android:layout_width="44dp"
-                android:layout_height="44dp"
-                android:importantForAccessibility="no"
-                android:src="@drawable/ic_sparkle"
-                android:tint="@color/claude_orange" />
+            <com.ast2012a.clinicalmaster.SemoOrbView
+                android:id="@+id/ai_orb"
+                android:layout_width="160dp"
+                android:layout_height="160dp" />
 
             <TextView
                 android:id="@+id/quick_prompts_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="4dp"
                 android:layout_marginBottom="26dp"
                 android:fontFamily="serif"
                 android:gravity="center"
@@ -175,6 +179,12 @@
                 android:textColor="@color/text_secondary"
                 android:textDirection="rtl"
                 android:textSize="14sp" />
+
+            <com.ast2012a.clinicalmaster.TypingDotsView
+                android:id="@+id/typing_dots"
+                android:layout_width="34dp"
+                android:layout_height="20dp"
+                android:layout_marginStart="8dp" />
         </LinearLayout>
     </FrameLayout>
 
@@ -188,7 +198,20 @@
         android:paddingEnd="12dp"
         android:paddingBottom="12dp">
 
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clipChildren="false">
+
+        <View
+            android:id="@+id/composer_glow"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:alpha="0"
+            android:background="@drawable/bg_composer_glow" />
+
         <LinearLayout
+            android:id="@+id/composer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@drawable/bg_composer"
@@ -237,5 +260,6 @@
                 app:rippleColor="#30FFFFFF"
                 app:tint="@color/white" />
         </LinearLayout>
+        </FrameLayout>
     </LinearLayout>
 </LinearLayout>

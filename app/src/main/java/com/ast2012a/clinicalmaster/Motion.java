@@ -14,6 +14,9 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
+import android.animation.ValueAnimator;
+import android.view.animation.AnimationUtils;
+import android.view.animation.OvershootInterpolator;
 
 import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.RecyclerView;
@@ -92,7 +95,10 @@ public final class Motion {
                 if (o.isAlive()) o.removeOnPreDrawListener(this);
                 try {
                     pressify(content);
-                    if (animationsEnabled(a)) entrance(content);
+                    if (animationsEnabled(a)) {
+                        entrance(content);
+                        decorate(content);
+                    }
                 } catch (Throwable ignored) {
                 }
                 return true;
@@ -104,7 +110,7 @@ public final class Motion {
         if (a instanceof SettingsActivity) return IllustrationView.GEARS;
         if (a instanceof UserGuideActivity) return IllustrationView.BOOK;
         if (a instanceof ScheduleActivity) return IllustrationView.CALENDAR;
-        if (a instanceof PatientDetailActivity) return IllustrationView.CALENDAR;
+        if (a instanceof PatientDetailActivity) return IllustrationView.WALK;
         if (a instanceof AddEditPatientActivity) return IllustrationView.PATIENTS;
         if (a instanceof PrivacyPolicyActivity) return IllustrationView.SHIELD;
         if (a instanceof MainActivity) return IllustrationView.PULSE;
@@ -225,5 +231,79 @@ public final class Motion {
         if (v.getStateListAnimator() != null) return;
         v.setTag(R.id.tag_motion, Boolean.TRUE);
         Ui.applyPressFeedback(v);
+    }
+
+    private static void decorate(View v) {
+        if (v instanceof androidx.appcompat.widget.Toolbar) {
+            popToolbar((ViewGroup) v);
+            return;
+        }
+        if (v instanceof RecyclerView) {
+            RecyclerView rv = (RecyclerView) v;
+            if (rv.getLayoutAnimation() == null) {
+                rv.setLayoutAnimation(AnimationUtils.loadLayoutAnimation(rv.getContext(), R.anim.layout_fall_stagger));
+                rv.scheduleLayoutAnimation();
+            }
+            return;
+        }
+        if (v instanceof com.google.android.material.floatingactionbutton.FloatingActionButton
+                && v.getVisibility() == View.VISIBLE && v.getTag(R.id.tag_breathe) == null) {
+            breathe(v);
+        }
+        if (v instanceof ViewGroup) {
+            ViewGroup g = (ViewGroup) v;
+            for (int i = 0; i < g.getChildCount(); i++) decorate(g.getChildAt(i));
+        }
+    }
+
+    private static void popToolbar(ViewGroup tb) {
+        java.util.ArrayList<View> icons = new java.util.ArrayList<>();
+        collectIcons(tb, icons);
+        for (int i = 0; i < icons.size(); i++) {
+            View ic = icons.get(i);
+            ic.setAlpha(0f);
+            ic.setScaleX(0.3f);
+            ic.setScaleY(0.3f);
+            ic.setRotation(-40f);
+            ic.animate().alpha(1f).scaleX(1f).scaleY(1f).rotation(0f)
+                    .setStartDelay(160L + i * 80L).setDuration(380)
+                    .setInterpolator(new OvershootInterpolator(2.2f)).start();
+        }
+    }
+
+    private static void collectIcons(ViewGroup g, java.util.List<View> out) {
+        for (int i = 0; i < g.getChildCount(); i++) {
+            View c = g.getChildAt(i);
+            if (c instanceof android.widget.ImageButton || c.getClass().getSimpleName().equals("ActionMenuItemView")) {
+                out.add(c);
+            } else if (c instanceof ViewGroup) {
+                collectIcons((ViewGroup) c, out);
+            }
+        }
+    }
+
+    private static void breathe(final View v) {
+        v.setTag(R.id.tag_breathe, Boolean.TRUE);
+        final ValueAnimator a = ValueAnimator.ofFloat(1f, 1.07f);
+        a.setDuration(1300);
+        a.setRepeatMode(ValueAnimator.REVERSE);
+        a.setRepeatCount(ValueAnimator.INFINITE);
+        a.addUpdateListener(an -> {
+            float s = (Float) an.getAnimatedValue();
+            v.setScaleX(s);
+            v.setScaleY(s);
+        });
+        v.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+            @Override
+            public void onViewAttachedToWindow(View view) {
+                if (!a.isStarted()) a.start();
+            }
+
+            @Override
+            public void onViewDetachedFromWindow(View view) {
+                a.cancel();
+            }
+        });
+        if (v.isAttachedToWindow()) a.start();
     }
 }

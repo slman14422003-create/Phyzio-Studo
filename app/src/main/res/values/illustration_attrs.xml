@@ -16,6 +16,7 @@
             <enum name="doc" value="11" />
             <enum name="clipboard" value="12" />
             <enum name="shield" value="13" />
+            <enum name="walk" value="14" />
         </attr>
     </declare-styleable>
 </resources>

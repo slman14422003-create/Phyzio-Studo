@@ -31,6 +31,7 @@ public class IllustrationView extends View {
     public static final int DOC = 11;
     public static final int CLIPBOARD = 12;
     public static final int SHIELD = 13;
+    public static final int WALK = 14;
 
     private static final float TWO_PI = (float) (Math.PI * 2.0);
 
@@ -261,6 +262,9 @@ public class IllustrationView extends View {
                 break;
             case SHIELD:
                 drawShield(canvas);
+                break;
+            case WALK:
+                drawWalk(canvas);
                 break;
             default:
                 drawPulse(canvas);
@@ -661,6 +665,34 @@ public class IllustrationView extends View {
         rect.set(-6f, -15f, 6f, 3f);
         c.drawArc(rect, 180f, 180f, false, S(cAccent, 2.8f));
         c.drawCircle(0f, 7f, 2f, F(Color.WHITE));
+        c.restore();
+    }
+
+    private void drawWalk(Canvas c) {
+        glow(c, 0, 0, 46);
+        float cyc = frac(t * 3f);
+        float ph = TWO_PI * cyc;
+        float bob = -1.8f * Math.abs((float) Math.sin(ph));
+        for (int i = -4; i <= 4; i++) {
+            float x = i * 18f - cyc * 18f;
+            c.drawLine(x, 38f, x + 8f, 38f, S(withAlpha(cInk, 0.35f), 2f));
+        }
+        c.save();
+        c.translate(0f, bob);
+        Paint p = S(cInk, 4.4f);
+        c.drawLine(0f, -20f, 0f, 6f, p);
+        for (int s = -1; s <= 1; s += 2) {
+            float off = s > 0 ? 0f : (float) Math.PI;
+            float a = (float) Math.sin(ph + off) * 0.55f;
+            float kx = (float) Math.sin(a) * 15f;
+            float ky = 6f + (float) Math.cos(a) * 15f;
+            float b = a - Math.max(0f, (float) Math.sin(ph + off + 1.2f)) * 0.7f;
+            c.drawLine(0f, 6f, kx, ky, p);
+            c.drawLine(kx, ky, kx + (float) Math.sin(b) * 15f, ky + (float) Math.cos(b) * 15f, p);
+            float arm = -a * 0.9f;
+            c.drawLine(0f, -17f, (float) Math.sin(arm) * 18f, -17f + (float) Math.cos(arm) * 18f, p);
+        }
+        c.drawCircle(0f, -30f, 8f, F(cAccent));
         c.restore();
     }
 }

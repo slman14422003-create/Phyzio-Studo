@@ -1,10 +1,19 @@
 package com.ast2012a.clinicalmaster;
 
 import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.animation.DecelerateInterpolator;
+import android.view.animation.LinearInterpolator;
+import android.view.animation.OvershootInterpolator;
 import android.view.animation.AnimationUtils;
 import android.view.animation.LayoutAnimationController;
 import android.widget.ImageView;
@@ -60,6 +69,23 @@ public class AiAssistantActivity extends AppCompatActivity {
     private String contextPatientId;
     private boolean requestInFlight;
     private FloatingActionButton sendButton;
+    private SemoOrbView orb;
+    private AmbientView ambient;
+    private BurstView burst;
+    private View composer;
+    private View composerGlow;
+    private View toolbarSpark;
+    private TextView quickTitle;
+    private boolean emptyShown;
+    private boolean promptChosen;
+    private boolean lastHasText;
+    private ValueAnimator sparkAnim;
+    private ValueAnimator glowAnim;
+    private ValueAnimator hintAnim;
+    private ObjectAnimator sendSpin;
+    private final Handler hintHandler = new Handler(Looper.getMainLooper());
+    private CharSequence defaultHint = "";
+    private int hintIndex;
 
     /** لو الشاشة اتفتحت من زر "اسأل الذكاء الاصطناعي عن هذا الملف" في قارئ
      *  PDF (v12)، بيتخزنوا اسم الملف ونصه المستخرَج هنا عشان كل سؤال في
@@ -96,8 +122,19 @@ public class AiAssistantActivity extends AppCompatActivity {
 
         startSparkleSpin(findViewById(R.id.typing_sparkle));
 
+        orb = findViewById(R.id.ai_orb);
+        ambient = findViewById(R.id.ai_ambient);
+        composer = findViewById(R.id.composer);
+        composerGlow = findViewById(R.id.composer_glow);
+        toolbarSpark = findViewById(R.id.toolbar_spark);
+        quickTitle = findViewById(R.id.quick_prompts_title);
+        burst = new BurstView(this);
+        addContentView(burst, new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
         adapter = new ChatAdapter(this::openSaveAsCase);
         adapter.setOnRegenerateListener(this::regenerateAnswer);
+        adapter.setBurstView(burst);
         LinearLayoutManager lm = new LinearLayoutManager(this);
         chatList.setLayoutManager(lm);
         chatList.setAdapter(adapter);
@@ -106,6 +143,8 @@ public class AiAssistantActivity extends AppCompatActivity {
         chatList.setLayoutAnimation(controller);
 
         sendBtn.setOnClickListener(v -> onSendClicked());
+        setupComposer();
+        startToolbarSpark();
 
         // استرجاع سجل المحادثة المحفوظ محليًا (لو موجود) قبل أي شيء تاني
         adapter.setMessages(AiChatStore.load(this));
@@ -126,6 +165,164 @@ public class AiAssistantActivity extends AppCompatActivity {
         contextDocumentName = getIntent().getStringExtra("document_name");
         contextDocumentText = getIntent().getStringExtra("document_text");
         bindContextBanner();
+        renderSendState(false);
+        startHintLoop();
+    }
+
+    private void startToolbarSpark() {
+        if (toolbarSpark == null) return;
+        sparkAnim = ValueAnimator.ofFloat(0f, 1f);
+        sparkAnim.setDuration(3600);
+        sparkAnim.setRepeatCount(ValueAnimator.INFINITE);
+        sparkAnim.setInterpolator(new LinearInterpolator());
+        sparkAnim.addUpdateListener(a -> {
+            float p = (Float) a.getAnimatedValue();
+            float s = (float) Math.sin(p * Math.PI * 2.0);
+            toolbarSpark.setRotation(p * 360f);
+            float sc = 1f + 0.16f * s * s;
+            toolbarSpark.setScaleX(sc);
+            toolbarSpark.setScaleY(sc);
+        });
+        sparkAnim.start();
+    }
+
+    private void setupComposer() {
+        defaultHint = input.getHint() == null ? "" : input.getHint();
+        input.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                renderSendState(true);
+                if (s.length() > 0 && orb != null && before0(s)) orb.kick();
+            }
+        });
+        input.setOnFocusChangeListener((v, focused) -> {
+            if (composerGlow == null) return;
+            if (glowAnim != null) {
+                glowAnim.cancel();
+                glowAnim = null;
+            }
+            composer.animate().scaleX(focused ? 1.012f : 1f).scaleY(focused ? 1.012f : 1f)
+                    .setDuration(220).setInterpolator(new DecelerateInterpolator()).start();
+            if (focused) {
+                input.setHint(defaultHint);
+                glowAnim = ValueAnimator.ofFloat(0.55f, 1f);
+                glowAnim.setDuration(900);
+                glowAnim.setRepeatMode(ValueAnimator.REVERSE);
+                glowAnim.setRepeatCount(ValueAnimator.INFINITE);
+                glowAnim.addUpdateListener(a -> composerGlow.setAlpha((Float) a.getAnimatedValue()));
+                glowAnim.start();
+            } else {
+                composerGlow.animate().alpha(0f).setDuration(200).start();
+            }
+        });
+    }
+
+    private boolean before0(Editable s) {
+        return s.length() % 3 == 1;
+    }
+
+    private void startHintLoop() {
+        hintHandler.removeCallbacksAndMessages(null);
+        hintHandler.postDelayed(this::runHintCycle, 2600);
+    }
+
+    private void runHintCycle() {
+        if (isFinishing() || isDestroyed()) return;
+        boolean idle = !input.hasFocus() && (input.getText() == null || input.getText().length() == 0);
+        if (!idle) {
+            hintHandler.postDelayed(this::runHintCycle, 2000);
+            return;
+        }
+        hintIndex = (hintIndex + 1) % (QUICK_PROMPTS.length + 1);
+        final String target = hintIndex == 0 ? String.valueOf(defaultHint) : QUICK_PROMPTS[hintIndex - 1];
+        if (hintAnim != null) hintAnim.cancel();
+        hintAnim = ValueAnimator.ofInt(0, target.length());
+        hintAnim.setDuration(Math.max(300L, target.length() * 40L));
+        hintAnim.setInterpolator(new LinearInterpolator());
+        hintAnim.addUpdateListener(a -> {
+            if (input.hasFocus()) return;
+            int n = (Integer) a.getAnimatedValue();
+            input.setHint(target.substring(0, n));
+        });
+        hintAnim.addListener(new android.animation.AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(android.animation.Animator animation) {
+                hintHandler.postDelayed(AiAssistantActivity.this::runHintCycle, 2400);
+            }
+        });
+        hintAnim.start();
+    }
+
+    private void renderSendState(boolean animate) {
+        if (sendButton == null) return;
+        boolean has = input.getText() != null && input.getText().toString().trim().length() > 0;
+        if (requestInFlight) {
+            sendButton.animate().cancel();
+            sendButton.setAlpha(1f);
+            sendButton.setScaleX(1f);
+            sendButton.setScaleY(1f);
+            if (sendSpin == null) {
+                sendButton.setImageResource(R.drawable.ic_refresh);
+                sendSpin = ObjectAnimator.ofFloat(sendButton, "rotation", 0f, 360f);
+                sendSpin.setDuration(900);
+                sendSpin.setInterpolator(new LinearInterpolator());
+                sendSpin.setRepeatCount(ObjectAnimator.INFINITE);
+                sendSpin.start();
+            }
+            return;
+        }
+        if (sendSpin != null) {
+            sendSpin.cancel();
+            sendSpin = null;
+            sendButton.setRotation(0f);
+            sendButton.setImageResource(R.drawable.ic_arrow_up);
+            animate = true;
+            lastHasText = !has;
+        }
+        if (has == lastHasText && animate) return;
+        lastHasText = has;
+        sendButton.animate().cancel();
+        if (!animate) {
+            sendButton.setAlpha(has ? 1f : 0.45f);
+            sendButton.setScaleX(has ? 1f : 0.88f);
+            sendButton.setScaleY(has ? 1f : 0.88f);
+            return;
+        }
+        if (has) {
+            sendButton.setScaleX(0.7f);
+            sendButton.setScaleY(0.7f);
+            sendButton.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(340)
+                    .setInterpolator(new OvershootInterpolator(3f)).start();
+            Ui.tick(sendButton);
+        } else {
+            sendButton.animate().alpha(0.45f).scaleX(0.88f).scaleY(0.88f).setDuration(220).start();
+        }
+    }
+
+    private void animateSend() {
+        burst.ringAt(sendButton);
+        burst.burstAt(sendButton, 12);
+        Ui.tick(sendButton);
+        sendButton.animate().cancel();
+        sendButton.animate().scaleX(0.8f).scaleY(0.8f).setDuration(70).withEndAction(() ->
+                sendButton.animate().translationY(-Ui.dp(this, 12)).scaleX(1.15f).scaleY(1.15f).setDuration(110)
+                        .withEndAction(() -> {
+                            sendButton.setTranslationY(Ui.dp(this, 14));
+                            sendButton.animate().translationY(0f).scaleX(1f).scaleY(1f).setDuration(260)
+                                    .setInterpolator(new OvershootInterpolator(2.2f)).start();
+                        }).start()).start();
+        composer.animate().cancel();
+        composer.setScaleX(0.985f);
+        composer.setScaleY(0.985f);
+        composer.animate().scaleX(1f).scaleY(1f).setDuration(320).setInterpolator(new OvershootInterpolator(2f)).start();
     }
 
     /** لو الشاشة مرتبطة بمريض محدد أو بمستند PDF مفتوح من القارئ (v12)،
@@ -154,6 +351,7 @@ public class AiAssistantActivity extends AppCompatActivity {
             if (text != null) text.setText("ملف المريض مرفق بهذه المحادثة (بدون الاسم أو رقم الهاتف)");
         }
         banner.setVisibility(hasDocument || hasPatient ? View.VISIBLE : View.GONE);
+        if (hasDocument || hasPatient) AiMotion.riseIn(banner, 200, -16, 420);
     }
 
     /** دوران مستمر بطيء لنجمة مؤشر التفكير (مثل نجمة Claude وهي تفكر). */
@@ -188,18 +386,96 @@ public class AiAssistantActivity extends AppCompatActivity {
                     LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
             lp.bottomMargin = Ui.dp(this, 10);
             row.setLayoutParams(lp);
-            row.setOnClickListener(v -> sendQuery(prompt, true));
+            row.setOnClickListener(v -> chooseQuickPrompt(row, prompt));
             Ui.applyPressFeedback(row);
             quickPromptsRow.addView(row);
         }
     }
 
+    private void chooseQuickPrompt(View chosen, String prompt) {
+        if (promptChosen || requestInFlight) return;
+        promptChosen = true;
+        AiMotion.bounce(chosen);
+        burst.ringAt(chosen);
+        burst.burstAt(chosen, 14);
+        for (int i = 0; i < quickPromptsRow.getChildCount(); i++) {
+            View r = quickPromptsRow.getChildAt(i);
+            if (r == chosen) continue;
+            r.animate().alpha(0f).translationY(Ui.dp(this, 14)).setDuration(220).start();
+        }
+        chosen.postDelayed(() -> {
+            promptChosen = false;
+            sendQuery(prompt, true);
+        }, 240);
+    }
+
     private void refreshQuickPromptsVisibility() {
-        emptyState.setVisibility(adapter.getItemCount() == 0 ? View.VISIBLE : View.GONE);
+        if (adapter.getItemCount() == 0) showEmpty();
+        else hideEmpty();
+    }
+
+    private void showEmpty() {
+        if (emptyShown) return;
+        emptyShown = true;
+        emptyState.animate().cancel();
+        emptyState.setVisibility(View.VISIBLE);
+        emptyState.setAlpha(1f);
+        emptyState.setTranslationY(0f);
+        emptyState.setScaleX(1f);
+        emptyState.setScaleY(1f);
+        playEmptyIntro();
+    }
+
+    private void hideEmpty() {
+        if (!emptyShown) {
+            emptyState.setVisibility(View.GONE);
+            return;
+        }
+        emptyShown = false;
+        emptyState.animate().cancel();
+        emptyState.animate().alpha(0f).translationY(-Ui.dp(this, 26)).scaleX(0.96f).scaleY(0.96f)
+                .setDuration(240).withEndAction(() -> {
+                    if (emptyShown) return;
+                    emptyState.setVisibility(View.GONE);
+                    emptyState.setAlpha(1f);
+                    emptyState.setTranslationY(0f);
+                    emptyState.setScaleX(1f);
+                    emptyState.setScaleY(1f);
+                    for (int i = 0; i < quickPromptsRow.getChildCount(); i++) {
+                        View r = quickPromptsRow.getChildAt(i);
+                        r.setAlpha(1f);
+                        r.setTranslationY(0f);
+                    }
+                }).start();
+    }
+
+    private void playEmptyIntro() {
+        orb.animate().cancel();
+        orb.setScaleX(0.2f);
+        orb.setScaleY(0.2f);
+        orb.setAlpha(0f);
+        orb.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(720)
+                .setInterpolator(new OvershootInterpolator(1.6f)).start();
+        quickTitle.postDelayed(() -> {
+            if (emptyShown) AiMotion.reveal(quickTitle, 900, null);
+        }, 260);
+        for (int i = 0; i < quickPromptsRow.getChildCount(); i++) {
+            View r = quickPromptsRow.getChildAt(i);
+            r.animate().cancel();
+            r.setAlpha(0f);
+            r.setTranslationY(Ui.dp(this, 30));
+            r.setScaleX(0.94f);
+            r.setScaleY(0.94f);
+            r.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f)
+                    .setStartDelay(560L + i * 110L).setDuration(460)
+                    .setInterpolator(new DecelerateInterpolator(1.8f)).start();
+        }
     }
 
     private boolean onMenuItemClick(MenuItem item) {
         if (item.getItemId() == R.id.action_clear_chat) {
+            View mi = findViewById(R.id.action_clear_chat);
+            if (mi != null) AiMotion.wobble(mi);
             confirmClearChat();
             return true;
         }
@@ -212,10 +488,15 @@ public class AiAssistantActivity extends AppCompatActivity {
                 .setTitle("مسح المحادثة")
                 .setMessage("هل تريد مسح كل سجل المحادثة مع Semo AI نهائيًا؟")
                 .setPositiveButton("مسح", (dialog, which) -> {
-                    adapter.clearAll();
-                    AiChatStore.clear(this);
-                    refreshQuickPromptsVisibility();
-                    Toast.makeText(this, "تم مسح المحادثة.", Toast.LENGTH_SHORT).show();
+                    chatList.animate().alpha(0f).translationY(-Ui.dp(this, 30)).setDuration(240)
+                            .withEndAction(() -> {
+                                adapter.clearAll();
+                                AiChatStore.clear(this);
+                                chatList.setAlpha(1f);
+                                chatList.setTranslationY(0f);
+                                refreshQuickPromptsVisibility();
+                                Toast.makeText(this, "تم مسح المحادثة.", Toast.LENGTH_SHORT).show();
+                            }).start();
                 })
                 .setNegativeButton("إلغاء", null)
                 .show();
@@ -223,7 +504,12 @@ public class AiAssistantActivity extends AppCompatActivity {
 
     private void onSendClicked() {
         String text = input.getText() == null ? "" : input.getText().toString().trim();
-        if (text.isEmpty()) return;
+        if (text.isEmpty()) {
+            AiMotion.shake(composer);
+            return;
+        }
+        if (requestInFlight) return;
+        animateSend();
         sendQuery(text, true);
     }
 
@@ -311,6 +597,8 @@ public class AiAssistantActivity extends AppCompatActivity {
     private void deliverReply(ChatMessage message) {
         runOnUiThread(() -> {
             if (isFinishing() || isDestroyed()) return;
+            View sp = findViewById(R.id.typing_sparkle);
+            if (sp != null && typingIndicator.getVisibility() == View.VISIBLE) burst.burstAt(sp, 16);
             setRequestInFlight(false);
             hideTypingIndicator();
             adapter.addMessage(message);
@@ -321,18 +609,21 @@ public class AiAssistantActivity extends AppCompatActivity {
 
     private void setRequestInFlight(boolean inFlight) {
         requestInFlight = inFlight;
-        if (sendButton != null) {
-            sendButton.setEnabled(!inFlight);
-            sendButton.setAlpha(inFlight ? 0.5f : 1f);
-        }
+        if (sendButton != null) sendButton.setEnabled(!inFlight);
+        if (orb != null) orb.setThinking(inFlight);
+        if (ambient != null) ambient.setBoost(inFlight);
+        renderSendState(true);
     }
 
     private void setTypingStage(int stage) {
-        if (typingIndicator.getVisibility() != View.VISIBLE) {
+        boolean first = typingIndicator.getVisibility() != View.VISIBLE;
+        if (first) {
             typingIndicator.animate().cancel();
             typingIndicator.setAlpha(0f);
+            typingIndicator.setTranslationY(Ui.dp(this, 12));
             typingIndicator.setVisibility(View.VISIBLE);
-            typingIndicator.animate().alpha(1f).setDuration(180).start();
+            typingIndicator.animate().alpha(1f).translationY(0f).setDuration(260)
+                    .setInterpolator(new DecelerateInterpolator()).start();
         }
         String label;
         switch (stage) {
@@ -345,7 +636,18 @@ public class AiAssistantActivity extends AppCompatActivity {
             default:
                 label = "بيفهم قصدك...";
         }
-        typingText.setText(label);
+        if (first) {
+            typingText.setText(label);
+            return;
+        }
+        if (label.contentEquals(typingText.getText())) return;
+        final String next = label;
+        typingText.animate().cancel();
+        typingText.animate().alpha(0f).translationY(-Ui.dp(this, 6)).setDuration(110).withEndAction(() -> {
+            typingText.setText(next);
+            typingText.setTranslationY(Ui.dp(this, 6));
+            typingText.animate().alpha(1f).translationY(0f).setDuration(160).start();
+        }).start();
     }
 
     /** إخفاء مؤشر الكتابة بتدرّج ناعم (fade-out) بدل الاختفاء المفاجئ -
@@ -367,6 +669,11 @@ public class AiAssistantActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (sparkAnim != null) sparkAnim.cancel();
+        if (glowAnim != null) glowAnim.cancel();
+        if (hintAnim != null) hintAnim.cancel();
+        if (sendSpin != null) sendSpin.cancel();
+        hintHandler.removeCallbacksAndMessages(null);
         executor.shutdownNow();
     }
 
