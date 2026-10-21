@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -75,36 +76,40 @@ public class TreatmentProgramDetailActivity extends AppCompatActivity {
     private void render() {
         container.removeAllViews();
 
-        // الرأس: العنوان + شريحة التشخيص + تاريخ الإضافة
         View hero = inflater.inflate(R.layout.item_detail_hero, container, false);
         LinearLayout badges = hero.findViewById(R.id.hero_badges);
-        ((TextView) hero.findViewById(R.id.hero_title)).setText(
-                BidiText.fix(notEmpty(program.title) ? program.title.trim() : "(بدون عنوان)"));
-
-        if (notEmpty(program.diagnosis)) {
-            TextView chip = (TextView) inflater.inflate(R.layout.item_badge, badges, false);
-            chip.setText(BidiText.fix("" + program.diagnosis.trim().replace('\n', ' ')));
-            chip.setTextDirection(View.TEXT_DIRECTION_RTL);
-            chip.setTextSize(12.5f);
-            chip.setBackgroundResource(R.drawable.bg_source_chip);
-            chip.setTextColor(getColor(R.color.m3_on_primary_container));
-            badges.addView(chip);
-        } else {
-            badges.setVisibility(View.GONE);
+        if (hero instanceof LinearLayout) {
+            IllustrationView ill = new IllustrationView(this);
+            ill.setScene(IllustrationView.EXERCISE);
+            ((LinearLayout) hero).addView(ill, 0, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 124)));
         }
+        ((TextView) hero.findViewById(R.id.hero_title)).setText(
+                BidiText.fix(notEmpty(program.title) ? program.title.trim() : getString(R.string.untitled_program)));
+
+        addChip(badges, program.diagnosis, true);
+        addChip(badges, program.audience, false);
+        addChip(badges, program.stage, false);
+        if (badges.getChildCount() == 0) badges.setVisibility(View.GONE);
 
         TextView date = hero.findViewById(R.id.hero_english);
         date.setTextDirection(View.TEXT_DIRECTION_RTL);
-        date.setText(BidiText.fix("أُضيف في " + Fmt.date(program.createdAt)));
+        date.setText(BidiText.fix(getString(R.string.lbl_created) + " " + Fmt.date(program.createdAt)));
         date.setVisibility(View.VISIBLE);
         container.addView(hero);
 
-        addSection("الأهداف", program.goals, false);
-        addSection("مراحل العلاج", program.phases, false);
-        addSection("التمارين", program.exercises, false);
-        addSection("خطة الجلسات", program.sessionsPlan, false);
-        addSection("الاحتياطات", program.precautions, true);
-        addSection("ملاحظات", program.notes, false);
+        addOverview();
+
+        addSection(R.string.lbl_goals, program.goals, false);
+        addSection(R.string.lbl_phases, program.phases, false);
+        addSection(R.string.lbl_exercises, program.exercises, false);
+        addSection(R.string.lbl_equipment, program.equipment, false);
+        addSection(R.string.lbl_sessions_plan, program.sessionsPlan, false);
+        addSection(R.string.lbl_progression, program.progression, false);
+        addSection(R.string.lbl_followup, program.followUp, false);
+        addSection(R.string.lbl_home, program.homeProgram, false);
+        addSection(R.string.lbl_precautions, program.precautions, true);
+        addSection(R.string.lbl_notes, program.notes, false);
 
         View actions = inflater.inflate(R.layout.item_program_actions, container, false);
         actions.findViewById(R.id.btn_assign_patient).setOnClickListener(v -> assignToPatient());
@@ -118,9 +123,71 @@ public class TreatmentProgramDetailActivity extends AppCompatActivity {
         container.addView(actions);
     }
 
-    /** نص من سطر واحد = فقرة؛ عدة أسطر = قائمة نقطية. */
-    private void addSection(String title, String text, boolean warning) {
+    private void addChip(LinearLayout badges, String text, boolean primary) {
         if (!notEmpty(text)) return;
+        TextView chip = (TextView) inflater.inflate(R.layout.item_badge, badges, false);
+        chip.setText(BidiText.fix(text.trim().replace('\n', ' ')));
+        chip.setTextDirection(View.TEXT_DIRECTION_RTL);
+        chip.setTextSize(12.5f);
+        chip.setBackgroundResource(primary ? R.drawable.bg_source_chip : R.drawable.bg_badge_tens);
+        chip.setTextColor(getColor(primary ? R.color.m3_on_primary_container : R.color.m3_on_secondary_container));
+        LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) chip.getLayoutParams();
+        lp.setMarginEnd(Ui.dp(this, 6));
+        badges.addView(chip);
+    }
+
+    private void addOverview() {
+        View card = inflater.inflate(R.layout.item_spec_card, container, false);
+        LinearLayout rows = card.findViewById(R.id.spec_rows);
+        boolean first = true;
+
+        String regions = CaseItem.joinList(program.regions);
+        if (notEmpty(regions)) {
+            addSpec(rows, R.string.lbl_region, regions, first);
+            first = false;
+        }
+        String modalities = CaseItem.joinList(program.modalities);
+        if (notEmpty(modalities)) {
+            addSpec(rows, R.string.lbl_modalities, modalities, first);
+            first = false;
+        }
+        if (program.durationWeeks > 0) {
+            addSpec(rows, R.string.lbl_weeks, getString(R.string.fmt_weeks, program.durationWeeks), first);
+            first = false;
+        }
+        if (program.sessionsPerWeek > 0) {
+            addSpec(rows, R.string.lbl_sessions_week, getString(R.string.fmt_per_week, program.sessionsPerWeek), first);
+            first = false;
+        }
+        if (notEmpty(program.sessionDuration)) {
+            addSpec(rows, R.string.lbl_session_duration, program.sessionDuration, first);
+            first = false;
+        }
+        String outcomes = CaseItem.joinList(program.outcomes);
+        if (notEmpty(outcomes)) {
+            addSpec(rows, R.string.lbl_outcomes, outcomes, first);
+            first = false;
+        }
+        if (rows.getChildCount() > 0) container.addView(card);
+    }
+
+    private void addSpec(LinearLayout rows, int labelRes, String value, boolean first) {
+        View row = inflater.inflate(R.layout.item_spec_row, rows, false);
+        ((TextView) row.findViewById(R.id.spec_label)).setText(labelRes);
+        if (first) row.findViewById(R.id.spec_divider).setVisibility(View.GONE);
+        rows.addView(row);
+        LinearLayout values = row.findViewById(R.id.spec_values);
+        TextView v = (TextView) inflater.inflate(R.layout.item_plain_value, values, false);
+        v.setText(BidiText.fix(value));
+        v.setTextSize(15f);
+        v.setTypeface(v.getTypeface(), android.graphics.Typeface.BOLD);
+        values.addView(v);
+    }
+
+    /** نص من سطر واحد = فقرة؛ عدة أسطر = قائمة نقطية. */
+    private void addSection(int titleRes, String text, boolean warning) {
+        if (!notEmpty(text)) return;
+        String title = getString(titleRes);
         String[] lines = text.trim().split("\\r?\\n");
         int count = 0;
         for (String l : lines) if (!l.trim().isEmpty()) count++;
@@ -168,27 +235,14 @@ public class TreatmentProgramDetailActivity extends AppCompatActivity {
 
     private void shareProgram() {
         if (program == null) return;
-        StringBuilder sb = new StringBuilder();
-        sb.append(notEmpty(program.title) ? program.title.trim() : "برنامج علاج").append('\n');
-        appendSection(sb, "التشخيص", program.diagnosis);
-        appendSection(sb, "الأهداف", program.goals);
-        appendSection(sb, "مراحل العلاج", program.phases);
-        appendSection(sb, "التمارين", program.exercises);
-        appendSection(sb, "خطة الجلسات", program.sessionsPlan);
-        appendSection(sb, "الاحتياطات", program.precautions);
-        appendSection(sb, "ملاحظات", program.notes);
-
         Intent send = new Intent(Intent.ACTION_SEND);
         send.setType("text/plain");
         send.putExtra(Intent.EXTRA_SUBJECT, program.title);
-        send.putExtra(Intent.EXTRA_TEXT, sb.toString().trim());
-        startActivity(Intent.createChooser(send, "مشاركة البرنامج"));
+        send.putExtra(Intent.EXTRA_TEXT, program.toShareText(this));
+        startActivity(Intent.createChooser(send, "\u0645\u0634\u0627\u0631\u0643\u0629 \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062c"));
     }
 
-    private void appendSection(StringBuilder sb, String title, String text) {
-        if (!notEmpty(text)) return;
-        sb.append('\n').append(title).append(":\n").append(text.trim()).append('\n');
-    }
+
 
     private void confirmDelete() {
         new ClaudeDialog(this)

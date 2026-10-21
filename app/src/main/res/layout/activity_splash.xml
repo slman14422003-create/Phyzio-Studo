@@ -6,6 +6,7 @@
      * أسفل الشاشة: اسم المطوّر PT Slman بحروف متباعدة رمادية (مثل ANTHROPIC)
      ============================================================================ -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg_deep_1">
@@ -42,6 +43,15 @@
             android:textSize="36sp"
             android:textStyle="bold" />
     </LinearLayout>
+
+    <com.ast2012a.clinicalmaster.IllustrationView
+        android:id="@+id/splash_pulse"
+        android:layout_width="240dp"
+        android:layout_height="96dp"
+        android:layout_gravity="center"
+        android:layout_marginTop="170dp"
+        android:alpha="0"
+        app:scene="pulse" />
 
     <TextView
         android:id="@+id/splash_credit"

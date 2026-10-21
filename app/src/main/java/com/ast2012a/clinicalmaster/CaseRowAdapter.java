@@ -53,30 +53,48 @@ public class CaseRowAdapter extends RecyclerView.Adapter<CaseRowAdapter.ViewHold
 
         holder.title.setText(BidiText.fix(item.title));
 
-        // الشارات
         holder.badges.removeAllViews();
-        ProtocolParser.Modes modes = ProtocolParser.parseModes(item.mode);
         int shown = 0;
-        for (ProtocolParser.ModeChip chip : modes.chips) {
-            if (shown == 3) break;
-            addBadge(holder.badges, (chip.type.isEmpty() ? "" : chip.type + " ") + chip.number, chip.type);
+        if (item.category != null && !item.category.trim().isEmpty()) {
+            addBadge(holder.badges, item.category.trim(), "EMS");
             shown++;
         }
-        if (modes.chips.size() > 3) {
-            addBadge(holder.badges, "+" + (modes.chips.size() - 3), "");
+        if (item.stage != null && !item.stage.trim().isEmpty()) {
+            addBadge(holder.badges, item.stage.trim(), "");
+            shown++;
         }
-        if (modes.chips.isEmpty()) {
-            if (ProtocolParser.hasTens(item.mode)) addBadge(holder.badges, "TENS", "TENS");
-            if (ProtocolParser.hasEms(item.mode)) addBadge(holder.badges, "EMS", "EMS");
+        if (item.severity != null && !item.severity.trim().isEmpty()) {
+            addBadge(holder.badges, item.severity.trim(), "");
+            shown++;
+        }
+        if (shown == 0) {
+            ProtocolParser.Modes modes = ProtocolParser.parseModes(item.mode);
+            for (ProtocolParser.ModeChip chip : modes.chips) {
+                if (shown == 3) break;
+                addBadge(holder.badges, (chip.type.isEmpty() ? "" : chip.type + " ") + chip.number, chip.type);
+                shown++;
+            }
+            if (modes.chips.isEmpty()) {
+                if (ProtocolParser.hasTens(item.mode)) addBadge(holder.badges, "TENS", "TENS");
+                if (ProtocolParser.hasEms(item.mode)) addBadge(holder.badges, "EMS", "EMS");
+            }
         }
         holder.badges.setVisibility(holder.badges.getChildCount() == 0 ? View.GONE : View.VISIBLE);
 
-        // ملخص المدة والتردد
         StringBuilder meta = new StringBuilder();
-        if (item.duration != null && !item.duration.trim().isEmpty()) meta.append(item.duration.trim());
+        String regions = CaseItem.joinList(item.regions);
+        if (!regions.isEmpty()) meta.append(regions);
+        if (item.sessionsPerWeek > 0) {
+            if (meta.length() > 0) meta.append(" \u00b7 ");
+            meta.append(ctx.getString(R.string.fmt_per_week, item.sessionsPerWeek));
+        }
+        if (item.duration != null && !item.duration.trim().isEmpty()) {
+            if (meta.length() > 0) meta.append(" \u00b7 ");
+            meta.append(item.duration.trim());
+        }
         String freq = ProtocolParser.shortFrequency(item.freq);
         if (!freq.isEmpty()) {
-            if (meta.length() > 0) meta.append(" · ");
+            if (meta.length() > 0) meta.append(" \u00b7 ");
             meta.append(freq);
         }
         if (meta.length() == 0) {
@@ -106,6 +124,7 @@ public class CaseRowAdapter extends RecyclerView.Adapter<CaseRowAdapter.ViewHold
         Context ctx = parent.getContext();
         TextView badge = (TextView) LayoutInflater.from(ctx).inflate(R.layout.item_badge, parent, false);
         badge.setText(text);
+        badge.setTextDirection(View.TEXT_DIRECTION_RTL);
         if ("EMS".equals(type)) {
             badge.setBackgroundResource(R.drawable.bg_badge_ems);
             badge.setTextColor(ctx.getColor(R.color.m3_on_primary_container));

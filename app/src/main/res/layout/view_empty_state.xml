@@ -8,22 +8,24 @@
     android:paddingStart="32dp"
     android:paddingEnd="32dp">
 
+    <com.ast2012a.clinicalmaster.IllustrationView
+        android:id="@+id/empty_illustration"
+        android:layout_width="match_parent"
+        android:layout_height="150dp" />
+
     <ImageView
         android:id="@+id/empty_icon"
-        android:layout_width="84dp"
-        android:layout_height="84dp"
-        android:background="@drawable/bg_settings_group"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:importantForAccessibility="no"
-        android:padding="26dp"
-        android:src="@drawable/ic_folder"
-        android:tint="@color/text_secondary" />
+        android:visibility="gone" />
 
     <TextView
         android:id="@+id/empty_title"
         style="@style/Phizyo.HeroTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="8dp"
         android:textAlignment="center"
         android:textSize="20sp" />
 

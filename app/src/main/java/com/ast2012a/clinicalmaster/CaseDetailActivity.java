@@ -10,6 +10,7 @@ import android.text.style.ForegroundColorSpan;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -117,16 +118,71 @@ public class CaseDetailActivity extends AppCompatActivity {
             addPlainDetails();
         }
 
-        if (notEmpty(currentCase.explanation)) {
-            addSectionTitle("الشرح السريري");
-            addTextCard(null, currentCase.explanation, false);
-        }
-        addTextCard("الأعراض المرتبطة", currentCase.symptoms, false);
-        addTextCard("خطة الجلسات", currentCase.sessionsPlan, false);
-        addTextCard("نصيحة عملية", currentCase.tip, true);
+        addSection(R.string.lbl_explanation, currentCase.explanation, false, false);
+        addSection(R.string.lbl_symptoms, currentCase.symptoms, false, false);
+        addSection(R.string.lbl_assessment, currentCase.assessment, false, false);
+        addSection(R.string.lbl_goals, currentCase.goals, false, false);
+        addSection(R.string.lbl_dosage, currentCase.dosage, false, false);
+        addSection(R.string.lbl_sessions_plan, currentCase.sessionsPlan, false, false);
+        addSection(R.string.lbl_home, currentCase.homeExercises, false, false);
+        addSection(R.string.lbl_progression, currentCase.progression, false, false);
+        addSection(R.string.lbl_precautions, currentCase.precautions, true, false);
+        addSection(R.string.lbl_tip, currentCase.tip, false, true);
 
         addSafety();
         addActions();
+    }
+
+    private void addSection(int titleRes, String text, boolean warning, boolean tip) {
+        if (!notEmpty(text)) return;
+        String[] lines = text.trim().split("\\r?\\n");
+        int count = 0;
+        for (String l : lines) if (!l.trim().isEmpty()) count++;
+        String title = getString(titleRes);
+
+        if (count <= 1 || tip) {
+            View card = inflater.inflate(R.layout.item_text_card, container, false);
+            TextView label = card.findViewById(R.id.text_card_label);
+            TextView body = card.findViewById(R.id.text_card_body);
+            label.setText(title);
+            body.setText(BidiText.fix(text.trim()));
+            if (warning) {
+                card.setBackgroundResource(R.drawable.bg_glass_card_warning);
+                label.setTextColor(getColor(R.color.accent_red));
+            }
+            if (tip) {
+                card.setBackgroundResource(R.drawable.bg_tip_callout);
+                label.setTextColor(getColor(R.color.m3_on_tertiary_container));
+                body.setTextColor(getColor(R.color.m3_on_tertiary_container));
+            }
+            container.addView(card);
+            return;
+        }
+
+        View card = inflater.inflate(R.layout.item_list_card, container, false);
+        if (warning) card.setBackgroundResource(R.drawable.bg_glass_card_warning);
+        TextView titleView = card.findViewById(R.id.list_title);
+        titleView.setText(title);
+        if (warning) titleView.setTextColor(getColor(R.color.accent_red));
+        LinearLayout list = card.findViewById(R.id.list_container);
+        for (String l : lines) {
+            String clean = l.trim().replaceFirst("^[\\-\\u2022*]\\s+", "");
+            if (clean.isEmpty()) continue;
+            addBullet(list, clean);
+        }
+        container.addView(card);
+    }
+
+    private int heroScene() {
+        String[] keys = getResources().getStringArray(R.array.key_spine);
+        StringBuilder sb = new StringBuilder();
+        sb.append(currentCase.category).append(' ').append(CaseItem.joinList(currentCase.regions));
+        String blob = sb.toString();
+        for (String k : keys) if (blob.contains(k)) return IllustrationView.SPINE;
+        if (CaseItem.joinList(currentCase.modalities).contains(getString(R.string.key_exercise))) {
+            return IllustrationView.EXERCISE;
+        }
+        return IllustrationView.PULSE;
     }
 
     private boolean notEmpty(String s) {
@@ -151,6 +207,13 @@ public class CaseDetailActivity extends AppCompatActivity {
         TextView titleView = hero.findViewById(R.id.hero_title);
         TextView englishView = hero.findViewById(R.id.hero_english);
 
+        if (hero instanceof LinearLayout) {
+            IllustrationView ill = new IllustrationView(this);
+            ill.setScene(heroScene());
+            ((LinearLayout) hero).addView(ill, 0, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(124)));
+        }
+
         ProtocolParser.TitleParts parts = ProtocolParser.splitTitle(currentCase.title);
         titleView.setText(BidiText.fix(parts.main));
         if (!parts.english.isEmpty()) {
@@ -158,17 +221,25 @@ public class CaseDetailActivity extends AppCompatActivity {
             englishView.setVisibility(View.VISIBLE);
         }
 
+        if (notEmpty(currentCase.category)) {
+            TextView b = addBadge(badges, currentCase.category, "EMS");
+            b.setTextDirection(View.TEXT_DIRECTION_RTL);
+        }
+        if (notEmpty(currentCase.stage)) {
+            TextView b = addBadge(badges, currentCase.stage, "");
+            b.setTextDirection(View.TEXT_DIRECTION_RTL);
+        }
+        if (notEmpty(currentCase.severity)) {
+            TextView b = addBadge(badges, currentCase.severity, "");
+            b.setTextDirection(View.TEXT_DIRECTION_RTL);
+            b.setBackgroundResource(R.drawable.bg_source_chip);
+            b.setTextColor(getColor(R.color.m3_on_primary_container));
+        }
         if (ProtocolParser.hasTens(currentCase.mode)) {
             addBadge(badges, "TENS", "TENS");
         }
         if (ProtocolParser.hasEms(currentCase.mode)) {
             addBadge(badges, "EMS", "EMS");
-        }
-        if (currentCase.custom) {
-            TextView custom = addBadge(badges, "حالة مخصصة", "");
-            custom.setTextDirection(View.TEXT_DIRECTION_RTL);
-            custom.setBackgroundResource(R.drawable.bg_source_chip);
-            custom.setTextColor(getColor(R.color.m3_on_primary_container));
         }
         if (badges.getChildCount() == 0) badges.setVisibility(View.GONE);
 
@@ -203,35 +274,54 @@ public class CaseDetailActivity extends AppCompatActivity {
         LinearLayout rows = card.findViewById(R.id.spec_rows);
         boolean first = true;
 
-        if (notEmpty(currentCase.mode)) {
-            LinearLayout values = addSpecRow(rows, "النمط", first);
+        String regions = CaseItem.joinList(currentCase.regions);
+        if (notEmpty(regions)) {
+            addPlainValue(addSpecRow(rows, getString(R.string.lbl_region), first), regions);
             first = false;
-            ProtocolParser.Modes modes = ProtocolParser.parseModes(currentCase.mode);
-            if (modes.chips.isEmpty()) {
-                addPlainValue(values, currentCase.mode);
-            } else {
-                for (ProtocolParser.ModeChip chip : modes.chips) addModeLine(values, chip);
-            }
         }
-
-        if (notEmpty(currentCase.freq)) {
-            LinearLayout values = addSpecRow(rows, "التردد", first);
+        String modalities = CaseItem.joinList(currentCase.modalities);
+        if (notEmpty(modalities)) {
+            addPlainValue(addSpecRow(rows, getString(R.string.lbl_modalities), first), modalities);
             first = false;
-            for (ProtocolParser.FreqLine line : ProtocolParser.parseFrequency(currentCase.freq)) {
-                addFreqLine(values, line);
-            }
         }
-
-        if (notEmpty(currentCase.channel)) {
-            LinearLayout values = addSpecRow(rows, "القناة", first);
+        if (currentCase.sessionsPerWeek > 0 || currentCase.totalSessions > 0) {
+            String perWeek = currentCase.sessionsPerWeek > 0
+                    ? getString(R.string.fmt_per_week, currentCase.sessionsPerWeek) : "";
+            String total = currentCase.totalSessions > 0
+                    ? getString(R.string.fmt_total, currentCase.totalSessions) : "";
+            String value = perWeek.isEmpty() ? total : (total.isEmpty() ? perWeek
+                    : getString(R.string.fmt_join_dot, perWeek, total));
+            addPlainValue(addSpecRow(rows, getString(R.string.sec_dosage), first), value);
             first = false;
-            addPlainValue(values, currentCase.channel);
         }
-
         if (notEmpty(currentCase.duration)) {
-            LinearLayout values = addSpecRow(rows, "المدة", first);
+            addPlainValue(addSpecRow(rows, getString(R.string.lbl_session_duration), first), currentCase.duration);
             first = false;
-            addPlainValue(values, currentCase.duration);
+        }
+
+        if (ProtocolParser.isElectrodeProtocol(currentCase.mode)) {
+            if (notEmpty(currentCase.mode)) {
+                LinearLayout values = addSpecRow(rows, "\u0627\u0644\u0646\u0645\u0637", first);
+                first = false;
+                ProtocolParser.Modes modes = ProtocolParser.parseModes(currentCase.mode);
+                if (modes.chips.isEmpty()) {
+                    addPlainValue(values, currentCase.mode);
+                } else {
+                    for (ProtocolParser.ModeChip chip : modes.chips) addModeLine(values, chip);
+                }
+            }
+            if (notEmpty(currentCase.freq)) {
+                LinearLayout values = addSpecRow(rows, "\u0627\u0644\u062a\u0631\u062f\u062f", first);
+                first = false;
+                for (ProtocolParser.FreqLine line : ProtocolParser.parseFrequency(currentCase.freq)) {
+                    addFreqLine(values, line);
+                }
+            }
+            if (notEmpty(currentCase.channel)) {
+                LinearLayout values = addSpecRow(rows, "\u0627\u0644\u0642\u0646\u0627\u0629", first);
+                first = false;
+                addPlainValue(values, currentCase.channel);
+            }
         }
 
         if (rows.getChildCount() > 0) container.addView(card);
@@ -489,7 +579,7 @@ public class CaseDetailActivity extends AppCompatActivity {
         Intent send = new Intent(Intent.ACTION_SEND);
         send.setType("text/plain");
         send.putExtra(Intent.EXTRA_SUBJECT, currentCase.title);
-        send.putExtra(Intent.EXTRA_TEXT, DataManager.buildLocalAnswer(currentCase));
+        send.putExtra(Intent.EXTRA_TEXT, currentCase.toShareText(this));
         startActivity(Intent.createChooser(send, "مشاركة الحالة"));
     }
 

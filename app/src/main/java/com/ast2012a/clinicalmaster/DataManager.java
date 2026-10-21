@@ -303,6 +303,7 @@ public class DataManager {
         String normChannel = normalize(item.channel);
         String normDuration = normalize(item.duration);
         String normSessionsPlan = normalize(item.sessionsPlan);
+        String normExtra = normalize(item.searchBlob() + " " + item.progression + " " + item.homeExercises);
         List<String> normKeywords = new ArrayList<>();
         for (String k : item.keywords) normKeywords.add(normalize(k));
         String[] titleWords = normTitle.split("\\s+");
@@ -333,6 +334,7 @@ public class DataManager {
                 if (normFreq.contains(term)) { score += 2; termMatched = true; }
                 if (normChannel.contains(term)) { score += 2; termMatched = true; }
                 if (normDuration.contains(term)) { score += 2; termMatched = true; }
+                if (normExtra.contains(term)) { score += 5; termMatched = true; }
             }
             if (!termMatched) {
                 if (fuzzyIncludes(keywordWords, rawTerm)) { score += 25; termMatched = true; }
@@ -462,31 +464,17 @@ public class DataManager {
     // -----------------------------------------------------------------
 
     public static String buildLocalAnswer(CaseItem c) {
+        android.app.Application app = ClinicalMasterApp.get();
         StringBuilder sb = new StringBuilder();
-        sb.append("🩺 ").append(c.title).append("\n\n");
-        sb.append("• النمط: ").append(nz(c.mode)).append("\n");
-        if (!nz(c.freq).isEmpty()) sb.append("• التردد: ").append(c.freq).append("\n");
-        if (!nz(c.channel).isEmpty()) sb.append("• القناة: ").append(c.channel).append("\n");
-        if (!nz(c.duration).isEmpty()) sb.append("• المدة: ").append(c.duration).append("\n");
-        if (c.poles != null && !c.poles.isEmpty()) {
-            sb.append("• الأقطاب: ").append(String.join("، ", c.poles)).append("\n");
-        }
-        if (!nz(c.symptoms).isEmpty()) {
-            sb.append("\n📌 الأعراض المرتبطة:\n").append(c.symptoms).append("\n");
-        }
-        if (!nz(c.explanation).isEmpty()) {
-            sb.append("\n📋 الشرح السريري:\n").append(c.explanation).append("\n");
-        }
-        if (!nz(c.sessionsPlan).isEmpty()) {
-            sb.append("\n🗓️ خطة الجلسات المقترحة:\n").append(c.sessionsPlan).append("\n");
-        }
-        if (!nz(c.tip).isEmpty()) {
-            sb.append("\n💡 ملاحظة عملية:\n").append(c.tip).append("\n");
-        }
-        List<String> notes = getGeneralSafetyNote(c.mode);
-        if (!notes.isEmpty()) {
-            sb.append("\n⚠️ تنبيهات السلامة:\n");
-            for (String n : notes) sb.append("• ").append(n).append("\n");
+        if (app != null) sb.append(c.toShareText(app));
+        else sb.append(c.title);
+        if (!nz(c.mode).isEmpty() && ProtocolParser.isElectrodeProtocol(c.mode)) {
+            sb.append("\n\n").append(nz(c.mode));
+            if (!nz(c.freq).isEmpty()) sb.append(" | ").append(c.freq);
+            if (!nz(c.channel).isEmpty()) sb.append(" | ").append(c.channel);
+            if (c.poles != null && !c.poles.isEmpty()) sb.append(" | ").append(String.join(", ", c.poles));
+            List<String> notes = getGeneralSafetyNote(c.mode);
+            for (String n : notes) sb.append("\n\u2022 ").append(n);
         }
         return sb.toString().trim();
     }
@@ -519,16 +507,29 @@ public class DataManager {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < count; i++) {
             CaseItem c = result.items.get(i);
-            sb.append("• ").append(c.title)
-              .append(" | النمط: ").append(c.mode)
-              .append(" | التردد: ").append(c.freq)
-              .append(" | القناة: ").append(c.channel)
-              .append(" | المدة: ").append(c.duration);
-            if (c.explanation != null && !c.explanation.isEmpty()) {
-                sb.append(" | الشرح السريري: ").append(c.explanation);
+            sb.append("\u2022 ").append(c.title);
+            if (!nz(c.category).isEmpty()) sb.append(" | ").append(c.category);
+            String regionText = CaseItem.joinList(c.regions);
+            if (!regionText.isEmpty()) sb.append(" | ").append(regionText);
+            if (!nz(c.stage).isEmpty()) sb.append(" | ").append(c.stage);
+            String modalityText = CaseItem.joinList(c.modalities);
+            if (!modalityText.isEmpty()) sb.append(" | ").append(modalityText);
+            if (!nz(c.mode).isEmpty() && ProtocolParser.isElectrodeProtocol(c.mode)) {
+                sb.append(" | ").append(c.mode).append(" | ").append(nz(c.freq))
+                  .append(" | ").append(nz(c.channel));
             }
+            if (!nz(c.duration).isEmpty()) sb.append(" | ").append(c.duration);
+            if (c.sessionsPerWeek > 0) sb.append(" | x").append(c.sessionsPerWeek).append("/w");
+            if (c.totalSessions > 0) sb.append(" | n=").append(c.totalSessions);
+            if (c.explanation != null && !c.explanation.isEmpty()) {
+                sb.append(" | ").append(c.explanation);
+            }
+            if (!nz(c.assessment).isEmpty()) sb.append(" | ").append(c.assessment);
+            if (!nz(c.goals).isEmpty()) sb.append(" | ").append(c.goals);
+            if (!nz(c.dosage).isEmpty()) sb.append(" | ").append(c.dosage);
+            if (!nz(c.precautions).isEmpty()) sb.append(" | ").append(c.precautions);
             if (c.sessionsPlan != null && !c.sessionsPlan.isEmpty()) {
-                sb.append(" | خطة الجلسات الموصى بها: ").append(c.sessionsPlan);
+                sb.append(" | ").append(c.sessionsPlan);
             }
             sb.append("\n");
         }

@@ -151,16 +151,14 @@ public class TreatmentProgramsActivity extends AppCompatActivity {
     }
 
     private boolean matches(TreatmentProgram t, String q) {
-        return DataManager.normalize(t.title).contains(q)
-                || DataManager.normalize(t.diagnosis).contains(q)
-                || DataManager.normalize(t.goals).contains(q);
+        return DataManager.normalize(t.searchBlob()).contains(q);
     }
 
     private View buildRow(final TreatmentProgram t) {
         View row = inflater.inflate(R.layout.item_treatment_program_row, container, false);
 
         ((TextView) row.findViewById(R.id.program_title)).setText(
-                BidiText.fix(t.title.trim().isEmpty() ? "(بدون عنوان)" : t.title.trim()));
+                BidiText.fix(t.title.trim().isEmpty() ? getString(R.string.untitled_program) : t.title.trim()));
 
         TextView diagnosis = row.findViewById(R.id.program_diagnosis);
         if (t.diagnosis.trim().isEmpty()) {
@@ -168,6 +166,25 @@ public class TreatmentProgramsActivity extends AppCompatActivity {
         } else {
             diagnosis.setText(BidiText.fix("" + t.diagnosis.trim().replace('\n', ' ')));
             diagnosis.setVisibility(View.VISIBLE);
+        }
+
+        TextView meta = row.findViewById(R.id.program_meta);
+        StringBuilder metaText = new StringBuilder();
+        String regions = CaseItem.joinList(t.regions);
+        if (!regions.isEmpty()) metaText.append(regions);
+        if (t.durationWeeks > 0) {
+            if (metaText.length() > 0) metaText.append(" \u00b7 ");
+            metaText.append(getString(R.string.fmt_weeks, t.durationWeeks));
+        }
+        if (t.sessionsPerWeek > 0) {
+            if (metaText.length() > 0) metaText.append(" \u00b7 ");
+            metaText.append(getString(R.string.fmt_per_week, t.sessionsPerWeek));
+        }
+        if (metaText.length() == 0) {
+            meta.setVisibility(View.GONE);
+        } else {
+            meta.setText(BidiText.fix(metaText.toString()));
+            meta.setVisibility(View.VISIBLE);
         }
 
         TextView goals = row.findViewById(R.id.program_goals);

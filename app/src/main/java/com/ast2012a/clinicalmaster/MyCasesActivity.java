@@ -126,7 +126,7 @@ public class MyCasesActivity extends AppCompatActivity implements CaseRowAdapter
 
     private boolean matches(CaseItem c, String q) {
         if (DataManager.normalize(c.title).contains(q)) return true;
-        if (DataManager.normalize(c.mode).contains(q)) return true;
+        if (DataManager.normalize(c.searchBlob()).contains(q)) return true;
         for (String k : c.keywords) {
             if (DataManager.normalize(k).contains(q)) return true;
         }

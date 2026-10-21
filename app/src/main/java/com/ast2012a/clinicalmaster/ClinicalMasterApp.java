@@ -19,9 +19,17 @@ import com.google.android.material.color.DynamicColorsOptions;
  *    يدويًا في themes.xml بدون أي تغيير.
  */
 public class ClinicalMasterApp extends Application {
+    private static Application instance;
+
+    public static Application get() {
+        return instance;
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
+        instance = this;
+        Motion.install(this);
         CrashHandler.install(this);
         ThemeManager.applySavedTheme(this);
 

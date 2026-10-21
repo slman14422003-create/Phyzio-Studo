@@ -51,6 +51,7 @@ public class SplashActivity extends AppCompatActivity {
 
         fadeIn(title, 260, 500);
         fadeIn(credit, 520, 500);
+        fadeIn(findViewById(R.id.splash_pulse), 640, 600);
 
         navigateRunnable = this::goToMain;
         handler.postDelayed(navigateRunnable, AUTO_NAVIGATE_DELAY_MS);

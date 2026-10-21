@@ -45,3 +45,22 @@
 - لم يُجرَ بناء (لا يوجد Android SDK ولا javac هنا): شغّل البناء وراجع أي خطأ.
 - الجدول يعرض وقتًا واحدًا لكل مريض لأن النموذج يخزن ساعة واحدة لكل الأيام.
 - ملفات الكلمات (tashkeel_dict وvalid_words وtaa_haa_lexicon) تخص القراءة الصوتية وتُركت كما هي.
+
+# skills — إعادة تصميم الحالات وبرامج العلاج + حركة وإحساس حي + رسومات متحركة
+
+## المهمة المنجزة
+- نموذج الحالة صار سريريًا للمعالج: الفئة، منطقة الإصابة، المرحلة، الشدة، الأعراض، الفحص والتقييم، الأهداف، طرق العلاج، الجرعة، عدد الجلسات أسبوعيًا وإجمالًا، مدة الجلسة، تمارين منزلية، معايير التقدم، الموانع. حُذفت حقول نوع التيار (النمط، التردد، القناة، الأقطاب) من النموذج وبقيت للقراءة في الحالات القديمة.
+- نموذج برنامج العلاج: الفئة المستهدفة، المنطقة، المرحلة، مدة البرنامج بالأسابيع، الجلسات أسبوعيًا، طرق العلاج، قوالب المراحل والتمارين، الأدوات، مقاييس النتائج، معايير التقدم، المتابعة، البرنامج المنزلي، الموانع.
+- كل حقل إما خيارات سريعة للضغط أو خانة كتابة، والخانات الكبيرة لها كبسولات تضيف عبارة جاهزة.
+- حركة عامة: دخول متتابع لعناصر كل شاشة، تصغير عند الضغط، انتقالات شاشات بعمق (انزلاق + تكبير + تلاشي).
+- رسومات متحركة (14 مشهد) في النماذج والتفاصيل والحالات الفارغة والإعدادات والدليل والجدول والمريض والخصوصية والرئيسية والشاشة الافتتاحية.
+
+## الملفات
+- جديدة: FormKit.java، FlowLayout.java، IllustrationView.java، Motion.java، res/values/clinical_forms.xml، res/values/illustration_attrs.xml.
+- معدّلة: CaseItem، TreatmentProgram، AddEditCaseActivity، AddEditTreatmentProgramActivity، CaseDetailActivity، TreatmentProgramDetailActivity، CaseRowAdapter، MyCasesActivity، TreatmentProgramsActivity، DataManager، ClinicalMasterApp، SplashActivity.
+- layouts: activity_add_edit، activity_add_edit_treatment_program، view_empty_state، activity_splash، item_treatment_program_row. anim: slide_in_right، slide_out_left، slide_in_left، slide_out_right، slide_up_in، slide_down_out.
+
+## ملاحظات للمتابعة
+- لم يُجرَ بناء (لا يوجد Android SDK هنا): شغّل البناء وراجع أي خطأ.
+- Motion يحقن الرسوم تلقائيًا في الشاشات ويستثني PdfViewer وAiAssistant من الدخول المتتابع.
+- الحالات القديمة تعمل كما هي ولا تضيع بياناتها عند التعديل.

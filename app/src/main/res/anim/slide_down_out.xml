@@ -1,14 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- إغلاق شاشة نموذج: هبوط سريع مع تلاشي -->
 <set xmlns:android="http://schemas.android.com/apk/res/android"
     android:shareInterpolator="false">
     <translate
-        android:duration="280"
+        android:duration="320"
         android:fromYDelta="0"
         android:interpolator="@android:interpolator/fast_out_linear_in"
-        android:toYDelta="9%" />
+        android:toYDelta="14%" />
+    <scale
+        android:duration="320"
+        android:fromXScale="1.0"
+        android:fromYScale="1.0"
+        android:interpolator="@android:interpolator/fast_out_linear_in"
+        android:pivotX="50%"
+        android:pivotY="100%"
+        android:toXScale="0.96"
+        android:toYScale="0.96" />
     <alpha
-        android:duration="240"
+        android:duration="280"
         android:fromAlpha="1.0"
         android:interpolator="@android:interpolator/fast_out_linear_in"
         android:toAlpha="0.0" />
