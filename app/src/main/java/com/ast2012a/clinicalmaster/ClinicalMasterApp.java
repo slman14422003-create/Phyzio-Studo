@@ -46,6 +46,7 @@ public class ClinicalMasterApp extends Application {
             @Override public void onActivityDestroyed(android.app.Activity a) { }
         });
         Motion.install(this);
+        SelectionBar.install(this);
         CrashHandler.install(this);
         ThemeManager.applySavedTheme(this);
 
