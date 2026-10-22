@@ -34,26 +34,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/**
- * شاشة المساعد الذكي. تعمل دائمًا عبر رابط Cloudflare Worker الثابت
- * المبني داخل التطبيق (AiClient.FIXED_WORKER_URL) - بدون أي إعداد أو
- * مفتاح مطلوب من المستخدم.
- *
- * كل سؤال إكلينيكي يمر بمرحلتي تأريض (Grounding) قبل الوصول للنموذج، عشان
- * تقل الهلوسة والإجابات المخترعة قدر الإمكان:
- * 1) قاعدة بيانات الجهاز المحلية (البروتوكولات الموثقة لأنماط AST-2012A).
- * 2) Physiopedia حصرًا (مرجع علاج طبيعي متخصص فقط) - بدون أي بحث عام
- *    احتياطي خارج نطاق العلاج الطبيعي.
- *
- * ذاكرة المحادثة: كل رسالة بترسل ومعاها آخر رسائل نفس الجلسة كسياق قصير
- * المدى (AiOrchestrator.answer(..., history, ...))، عشان لو المستخدم قال
- * "بدي مريض" أو أي إشارة مختصرة، المساعد يفهمها بالرجوع للسياق اللي فات.
- *
- * أي إجابة استندت لمصدر (قاعدة الجهاز و/أو Physiopedia) تُعرض ومعها شارة
- * مصدر شفافة قابلة للفتح.
- */
 public class AiAssistantActivity extends AppCompatActivity {
-
     private RecyclerView chatList;
     private ChatAdapter adapter;
     private TextInputEditText input;
@@ -63,11 +44,9 @@ public class AiAssistantActivity extends AppCompatActivity {
     private LinearLayout quickPromptsRow;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
-    /** لو الشاشة اتفتحت من ملف مريض محدد ("اسأل Semo AI عن هذا المريض")،
-     *  بيتخزن معرّفه هنا عشان كل سؤال في المحادثة (بما فيها إعادة المحاولة)
-     *  يفضل مرفق معاه ملخص المريض المُعرَّف (بدون اسم/هاتف) تلقائيًا. */
     private String contextPatientId;
     private boolean requestInFlight;
+    private boolean deepMode;
     private FloatingActionButton sendButton;
     private SemoOrbView orb;
     private AmbientView ambient;
@@ -87,10 +66,6 @@ public class AiAssistantActivity extends AppCompatActivity {
     private CharSequence defaultHint = "";
     private int hintIndex;
 
-    /** لو الشاشة اتفتحت من زر "اسأل الذكاء الاصطناعي عن هذا الملف" في قارئ
-     *  PDF (v12)، بيتخزنوا اسم الملف ونصه المستخرَج هنا عشان كل سؤال في
-     *  المحادثة يفضل مرفق معاه محتوى الملف تلقائيًا - راجع
-     *  AiOrchestrator.answer(documentName, documentText, ...). */
     private String contextDocumentName;
     private String contextDocumentText;
 
@@ -146,7 +121,6 @@ public class AiAssistantActivity extends AppCompatActivity {
         setupComposer();
         startToolbarSpark();
 
-        // استرجاع سجل المحادثة المحفوظ محليًا (لو موجود) قبل أي شيء تاني
         adapter.setMessages(AiChatStore.load(this));
         if (adapter.getItemCount() > 0) {
             chatList.scrollToPosition(adapter.getItemCount() - 1);
@@ -325,12 +299,6 @@ public class AiAssistantActivity extends AppCompatActivity {
         composer.animate().scaleX(1f).scaleY(1f).setDuration(320).setInterpolator(new OvershootInterpolator(2f)).start();
     }
 
-    /** لو الشاشة مرتبطة بمريض محدد أو بمستند PDF مفتوح من القارئ (v12)،
-     *  بنعرض شريط توضيحي صغير أعلى المحادثة (نفس فكرة شارة المصدر) يفهم
-     *  المستخدم إن المساعد شايف سياق إضافي - بدون ذكر اسم المريض بالطبع،
-     *  مجرد تأكيد إن السياق مرفق. الحالتين متبادلتين (الشاشة بتتفتح إما من
-     *  ملف مريض أو من قارئ PDF، مش الاتنين مع بعض)، فبانر واحد قابل لإعادة
-     *  الاستخدام كفاية بدل تكرار Layout كامل لكل حالة. */
     private void bindContextBanner() {
         View banner = findViewById(R.id.ai_patient_context_banner);
         if (banner == null) return;
@@ -354,7 +322,6 @@ public class AiAssistantActivity extends AppCompatActivity {
         if (hasDocument || hasPatient) AiMotion.riseIn(banner, 200, -16, 420);
     }
 
-    /** دوران مستمر بطيء لنجمة مؤشر التفكير (مثل نجمة Claude وهي تفكر). */
     private void startSparkleSpin(View sparkle) {
         if (sparkle == null) return;
         ObjectAnimator anim = ObjectAnimator.ofFloat(sparkle, "rotation", 0f, 360f);
@@ -364,8 +331,6 @@ public class AiAssistantActivity extends AppCompatActivity {
         anim.start();
     }
 
-    /** صفوف اقتراحات سريعة (كبسولات بعرض كامل) تظهر فقط لما المحادثة تكون فاضية،
-     *  عشان توجّه المستخدم لأنواع الأسئلة اللي المساعد الذكي يقدر يساعد فيها. */
     private void setupQuickPrompts() {
         quickPromptsRow.removeAllViews();
         for (String prompt : QUICK_PROMPTS) {
@@ -479,7 +444,66 @@ public class AiAssistantActivity extends AppCompatActivity {
             confirmClearChat();
             return true;
         }
+        if (item.getItemId() == R.id.action_deep_research) {
+            deepMode = !deepMode;
+            item.setChecked(deepMode);
+            Toast.makeText(this, deepMode ? R.string.ai_deep_on : R.string.ai_deep_off, Toast.LENGTH_LONG).show();
+            return true;
+        }
+        if (item.getItemId() == R.id.action_digest) {
+            runDigest();
+            return true;
+        }
         return false;
+    }
+
+    private void runDigest() {
+        if (requestInFlight) return;
+        if (adapter.getItemCount() == 0) {
+            Toast.makeText(this, R.string.ai_digest_empty, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        List<ChatMessage> snapshot = new ArrayList<>(adapter.getMessages());
+        setRequestInFlight(true);
+        setTypingStage(3);
+        executor.execute(() -> {
+            try {
+                AiOrchestrator.digestConversation(this, snapshot,
+                        new AiOrchestrator.StageListener() {
+                            @Override public void onClassifying() { }
+                            @Override public void onSearching() { }
+                            @Override public void onThinking() { runOnUiThread(() -> setTypingStage(3)); }
+                        },
+                        new AiOrchestrator.ResultCallback() {
+                            @Override
+                            public void onChatReply(String reply) {
+                                deliverReply(new ChatMessage(ChatMessage.ROLE_AI, reply));
+                            }
+
+                            @Override
+                            public void onGroundedReply(String reply, String sourceLabel, String sourceUrl) {
+                                deliverReply(new ChatMessage(ChatMessage.ROLE_AI, reply, sourceLabel, sourceUrl, null));
+                            }
+
+                            @Override
+                            public void onError(String message) {
+                                runOnUiThread(() -> {
+                                    if (isFinishing() || isDestroyed()) return;
+                                    setRequestInFlight(false);
+                                    hideTypingIndicator();
+                                    Toast.makeText(AiAssistantActivity.this, message, Toast.LENGTH_LONG).show();
+                                });
+                            }
+                        });
+            } catch (RuntimeException e) {
+                runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    setRequestInFlight(false);
+                    hideTypingIndicator();
+                    Toast.makeText(AiAssistantActivity.this, R.string.ai_generic_error, Toast.LENGTH_LONG).show();
+                });
+            }
+        });
     }
 
     private void confirmClearChat() {
@@ -513,18 +537,10 @@ public class AiAssistantActivity extends AppCompatActivity {
         sendQuery(text, true);
     }
 
-    /** إعادة محاولة رد سابق: بيرسل نفس سؤال المستخدم الأصلي تاني بدون ما
-     *  يكرر فقاعة السؤال في المحادثة (already visible above). */
     private void regenerateAnswer(String originalQuery) {
         sendQuery(originalQuery, false);
     }
 
-    /**
-     * المسار الموحّد لإرسال أي سؤال (سواء مكتوب يدويًا، من شريحة اقتراح
-     * سريع، أو إعادة محاولة). القرار كامل بين "دردشة طبيعية مباشرة" أو
-     * "بحث/تأريض ثم رد" بقى مسؤولية AiOrchestrator - والنموذج نفسه هو
-     * اللي يحسم الاختيار ده مش قاعدة ثابتة في الشاشة.
-     */
     private void sendQuery(String text, boolean addUserBubble) {
         if (text == null || text.trim().isEmpty()) return;
         if (requestInFlight) return;
@@ -557,6 +573,7 @@ public class AiAssistantActivity extends AppCompatActivity {
             try {
                 AiOrchestrator.answer(this, text, contextPatientId,
                 contextDocumentName, contextDocumentText, historySnapshot,
+                new AiOrchestrator.Options(deepMode),
                 new AiOrchestrator.StageListener() {
                     @Override public void onClassifying() { runOnUiThread(() -> setTypingStage(0)); }
                     @Override public void onSearching() { runOnUiThread(() -> setTypingStage(1)); }
@@ -628,7 +645,10 @@ public class AiAssistantActivity extends AppCompatActivity {
         String label;
         switch (stage) {
             case 1:
-                label = getString(R.string.ai_stage_searching);
+                label = getString(deepMode ? R.string.ai_stage_deep : R.string.ai_stage_searching);
+                break;
+            case 3:
+                label = getString(R.string.ai_stage_digest);
                 break;
             case 2:
                 label = "يكتب الرد...";
@@ -650,8 +670,6 @@ public class AiAssistantActivity extends AppCompatActivity {
         }).start();
     }
 
-    /** إخفاء مؤشر الكتابة بتدرّج ناعم (fade-out) بدل الاختفاء المفاجئ -
-     *  نفس روح تدرّج الظهور في setTypingStage. */
     private void hideTypingIndicator() {
         typingIndicator.animate().cancel();
         typingIndicator.animate().alpha(0f).setDuration(150)

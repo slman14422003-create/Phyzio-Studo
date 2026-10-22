@@ -14,13 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * حفظ/تحميل سجل محادثة المساعد الذكي محليًا (ملف JSON داخل تخزين التطبيق
- * الخاص) حتى تفضل المحادثة موجودة لو المستخدم قفل التطبيق ورجع تاني.
- * متوافق مع سجلات محفوظة من نسخة أقدم كانت بتخزن role وtext فقط.
- */
 public class AiChatStore {
-
     private static final String FILE_NAME = "ai_chat_history.json";
 
     public static List<ChatMessage> load(Context ctx) {

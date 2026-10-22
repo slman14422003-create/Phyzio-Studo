@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Set;
 
 public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
-
     public interface OnSaveAsCaseListener {
         void onSaveAsCase(String aiText);
     }
@@ -126,7 +125,7 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
             return;
         }
 
-        holder.aiText.setText(m.text);
+        holder.aiText.setText(MarkdownSpans.render(ctx, m.text));
 
         if (m.sourceLabel != null && !m.sourceLabel.isEmpty()) {
             holder.source.setVisibility(View.VISIBLE);
@@ -149,7 +148,7 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
             holder.saveBtn.setOnClickListener(v -> {
                 AiMotion.bounce(v);
                 if (burst != null) burst.burstAt(v, 8);
-                saveListener.onSaveAsCase(m.text);
+                saveListener.onSaveAsCase(MarkdownLite.toPlain(m.text));
             });
         } else {
             holder.saveBtn.setVisibility(View.GONE);
@@ -159,7 +158,7 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
         holder.copyBtn.setOnClickListener(v -> {
             ClipboardManager clipboard = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
             if (clipboard != null) {
-                clipboard.setPrimaryClip(ClipData.newPlainText("ai_answer", m.text));
+                clipboard.setPrimaryClip(ClipData.newPlainText("ai_answer", MarkdownLite.toPlain(m.text)));
                 Toast.makeText(ctx, "تم نسخ الرد.", Toast.LENGTH_SHORT).show();
             }
             AiMotion.bounce(v);

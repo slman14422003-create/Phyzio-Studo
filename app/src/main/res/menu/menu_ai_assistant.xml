@@ -6,4 +6,13 @@
         android:icon="@drawable/ic_trash"
         android:title="مسح المحادثة"
         app:showAsAction="always" />
+    <item
+        android:id="@+id/action_deep_research"
+        android:checkable="true"
+        android:title="@string/menu_deep_research"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_digest"
+        android:title="@string/menu_digest"
+        app:showAsAction="never" />
 </menu>

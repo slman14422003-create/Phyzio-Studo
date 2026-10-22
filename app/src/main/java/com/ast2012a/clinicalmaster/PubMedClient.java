@@ -15,34 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * عميل خفيف لقاعدة PubMed (المكتبة الوطنية الأمريكية للطب - NCBI)، عبر
- * واجهة E-utilities الرسمية والمجانية بالكامل (بدون أي مفتاح API). هذا
- * مصدر خارجي ثالث (v9) بجانب Physiopedia وويكيبيديا - راجع AiOrchestrator
- * (runGrounded) وAiPrompts (MULTI_SOURCE_SYNTHESIS_GUARDRAIL) لتفاصيل
- * إضافته وكيف يوازَن استخدامه مع المصدرين الآخرين.
- *
- * الفرق الجوهري عن Physiopedia/ويكيبيديا: PubMed مش موسوعة أو مرجع
- * تعليمي، ده فهرس لأبحاث ودراسات علمية محكّمة (Peer-reviewed) فعليًا -
- * فهو أعلى مستوى دليل علمي متاح للتطبيق عند سؤال عن فعالية علاج معين أو
- * مقارنة مبنية على أدلة (Evidence-based)، بعكس Physiopedia (أدق لتفاصيل
- * البروتوكول العملي/التطبيقي) وويكيبيديا (خلفية عامة فقط).
- *
- * يعمل على خطوتين، زي WikipediaClient بالضبط لكن بواجهة E-utilities:
- * 1) esearch.fcgi -> يرجع أقرب PMID (معرّف المقالة) لمصطلح البحث.
- * 2) efetch.fcgi (rettype=abstract&retmode=text) -> يرجع نص الاستشهاد
- *    والعنوان والملخص (Abstract) كنص خام، ثم نستخرج منه العنوان وأطول
- *    فقرة (الملخص العلمي نفسه) بفحص بسيط بدون أي مكتبة تحليل خارجية.
- *
- * ملحوظة موثوقية: PubMed غالبيته الساحقة بالإنجليزية، فبيُستدعى بنفس
- * مصطلح البحث الإنجليزي المُجهَّز أصلًا لـPhysiopedia (physioQuery في
- * AiOrchestrator)، مش نص السؤال العربي الأصلي. لو الموقع مش متاح، أو
- * مفيش نتيجة، أو فشل استخراج ملخص فعلي من النص الخام، يرجع null بأمان
- * تام والتطبيق يكمّل بالمصادر التانية المتاحة - بدون أي كراش أو توقف،
- * بنفس فلسفة الأمان المستخدمة في كل عملاء المصادر الخارجية هنا.
- */
 public class PubMedClient {
-
     public static class Result {
         public String title;
         public String extract;
@@ -51,10 +24,9 @@ public class PubMedClient {
 
     private static final String ESEARCH_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi";
     private static final String EFETCH_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi";
-    private static final String TOOL_TAG = "ast2012a_clinicalmaster"; // تعريف أدب استخدام NCBI (اختياري لكن مستحسن)
+    private static final String TOOL_TAG = "ast2012a_clinicalmaster";
     private static final int TIMEOUT_MS = 8000;
 
-    /** يُستدعى دائمًا من Thread خلفية (فيه اتصال شبكة مباشر). */
     public static Result search(String query) {
         if (query == null || query.trim().isEmpty()) return null;
         try {
@@ -69,6 +41,35 @@ public class PubMedClient {
             return parseAbstractText(rawText, pmid);
         } catch (Exception e) {
             return null;
+        }
+    }
+
+    static List<PubMedXml.Article> searchMany(String query, int maxResults) {
+        List<PubMedXml.Article> empty = new ArrayList<>();
+        if (query == null || query.trim().isEmpty() || maxResults < 1) return empty;
+        try {
+            String term = URLEncoder.encode(query.trim() + " AND hasabstract", "UTF-8");
+            String searchUrl = ESEARCH_URL + "?db=pubmed&retmode=json&sort=relevance&retmax=" + maxResults
+                    + "&term=" + term + "&tool=" + TOOL_TAG;
+            String searchJson = httpGet(searchUrl);
+            if (searchJson == null) return empty;
+            JSONObject root = new JSONObject(searchJson);
+            JSONObject esearchresult = root.optJSONObject("esearchresult");
+            JSONArray idList = esearchresult != null ? esearchresult.optJSONArray("idlist") : null;
+            if (idList == null || idList.length() == 0) return empty;
+            StringBuilder ids = new StringBuilder();
+            for (int i = 0; i < idList.length(); i++) {
+                String id = idList.optString(i, "");
+                if (id.isEmpty()) continue;
+                if (ids.length() > 0) ids.append(',');
+                ids.append(id);
+            }
+            if (ids.length() == 0) return empty;
+            String fetchUrl = EFETCH_URL + "?db=pubmed&retmode=xml&rettype=abstract&id="
+                    + URLEncoder.encode(ids.toString(), "UTF-8") + "&tool=" + TOOL_TAG;
+            return PubMedXml.parse(httpGet(fetchUrl));
+        } catch (Exception e) {
+            return empty;
         }
     }
 
@@ -91,15 +92,6 @@ public class PubMedClient {
         }
     }
 
-    /**
-     * نص efetch (rettype=abstract) خام مقسّم لفقرات بفواصل أسطر فاضية،
-     * بالترتيب المعتاد: (1) استشهاد المجلة/التاريخ، (2) عنوان المقالة،
-     * (3) قائمة المؤلفين، (4) "Author information" (انتماءات - اختياري)،
-     * (5) الملخص العلمي نفسه (غالبًا أطول فقرة فعليًا)، (6) DOI/PMID/حقوق
-     * نشر ختامية. مفيش ضمان صارم إن كل مقالة عندها كل الفقرات دي بالترتيب
-     * ده بالظبط (يفرق حسب نوع المقالة)، فالاستخراج هنا تقريبي وآمن: لو
-     * فشل (مفيش فقرة تبان كملخص فعلي)، بيرجع null بدل تخمين محتوى غلط.
-     */
     private static Result parseAbstractText(String rawText, String pmid) {
         String[] rawParagraphs = rawText.split("\\n\\s*\\n");
         List<String> paragraphs = new ArrayList<>();
@@ -109,7 +101,6 @@ public class PubMedClient {
         }
         if (paragraphs.size() < 2) return null;
 
-        // العنوان: الفقرة الثانية عادة (بعد فقرة استشهاد المجلة الأولى).
         String title = paragraphs.get(1);
         if (title.length() > 300) title = title.substring(0, 300);
 
@@ -120,7 +111,7 @@ public class PubMedClient {
             if (lower.contains("author information")) continue;
             if (lower.startsWith("doi:") || lower.startsWith("pmid:") || lower.startsWith("pmcid:")
                     || lower.startsWith("©") || lower.startsWith("copyright")) continue;
-            // فقرة قصيرة جدًا غالبًا سطر مؤلفين أو انتماء، مش ملخص فعلي.
+
             if (p.length() < 150) continue;
             if (bestAbstract == null || p.length() > bestAbstract.length()) bestAbstract = p;
         }
@@ -141,7 +132,7 @@ public class PubMedClient {
             conn.setRequestMethod("GET");
             conn.setConnectTimeout(TIMEOUT_MS);
             conn.setReadTimeout(TIMEOUT_MS);
-            // NCBI بتطلب User-Agent واضح، ومستحسن (مش إلزامي) لأدب الاستخدام.
+
             conn.setRequestProperty("User-Agent", "AST2012A-ClinicalMaster-Android/1.0 (contact: app-only)");
 
             int status = conn.getResponseCode();

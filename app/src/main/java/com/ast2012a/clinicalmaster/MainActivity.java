@@ -628,8 +628,8 @@ public class MainActivity extends AppCompatActivity {
                     public void onChatReply(String reply) {
                         runOnUiThread(() -> {
                             aiInlineLoading.setVisibility(View.GONE);
-                            lastAiAnswer = reply;
-                            aiInlineAnswerText.setText(reply);
+                            lastAiAnswer = MarkdownLite.toPlain(reply);
+                            aiInlineAnswerText.setText(MarkdownSpans.render(MainActivity.this, reply));
                             Ui.fadeIn(aiInlineAnswerScroll, 280);
                         });
                     }
@@ -638,9 +638,12 @@ public class MainActivity extends AppCompatActivity {
                     public void onGroundedReply(String reply, String sourceLabel, String sourceUrl) {
                         runOnUiThread(() -> {
                             aiInlineLoading.setVisibility(View.GONE);
-                            lastAiAnswer = reply;
+                            lastAiAnswer = MarkdownLite.toPlain(reply);
                             String sourceNote = sourceLabel != null ? "المصدر: " + sourceLabel : null;
-                            aiInlineAnswerText.setText(sourceNote != null ? reply + "\n\n" + sourceNote : reply);
+                            android.text.SpannableStringBuilder shown = new android.text.SpannableStringBuilder(
+                                    MarkdownSpans.render(MainActivity.this, reply));
+                            if (sourceNote != null) shown.append("\n\n").append(sourceNote);
+                            aiInlineAnswerText.setText(shown);
                             Ui.fadeIn(aiInlineAnswerScroll, 280);
                         });
                     }
