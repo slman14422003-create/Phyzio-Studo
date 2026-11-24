@@ -1,6 +1,7 @@
 package com.ast2012a.clinicalmaster;
 
 import android.app.Application;
+import android.content.Context;
 
 import com.google.android.material.color.DynamicColors;
 import com.google.android.material.color.DynamicColorsOptions;
@@ -33,9 +34,15 @@ public class ClinicalMasterApp extends Application {
     }
 
     @Override
+    protected void attachBaseContext(Context base) {
+        super.attachBaseContext(LocaleManager.wrap(base));
+    }
+
+    @Override
     public void onCreate() {
         super.onCreate();
         instance = this;
+        LocaleManager.applySaved(this);
         registerActivityLifecycleCallbacks(new ActivityLifecycleCallbacks() {
             @Override public void onActivityStarted(android.app.Activity a) { startedActivities++; }
             @Override public void onActivityStopped(android.app.Activity a) { startedActivities = Math.max(0, startedActivities - 1); }

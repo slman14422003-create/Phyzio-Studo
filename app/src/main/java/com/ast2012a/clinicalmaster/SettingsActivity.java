@@ -44,6 +44,7 @@ public class SettingsActivity extends AppCompatActivity {
     private static final String KEY_NOTIF_ENABLED = "notif_enabled";
 
     private TextView themeValue;
+    private TextView languageValue;
     private TextView notifStatus;
     private TextView updateStatus;
     private View updateProgress;
@@ -68,6 +69,7 @@ public class SettingsActivity extends AppCompatActivity {
         toolbar.setNavigationOnClickListener(v -> finish());
 
         themeValue = findViewById(R.id.theme_value);
+        languageValue = findViewById(R.id.language_value);
         notifStatus = findViewById(R.id.notif_status);
         instructionsStatus = findViewById(R.id.ai_instructions_status);
         notifSwitch = findViewById(R.id.switch_notif);
@@ -107,6 +109,7 @@ public class SettingsActivity extends AppCompatActivity {
         });
 
         // عام
+        findViewById(R.id.btn_language).setOnClickListener(v -> showLanguageDialog());
         findViewById(R.id.btn_theme_mode).setOnClickListener(v -> showThemeDialog());
         findViewById(R.id.btn_notif).setOnClickListener(v -> toggleNotifications());
 
@@ -154,6 +157,7 @@ public class SettingsActivity extends AppCompatActivity {
             reduceSwitch.setChecked(on);
         });
 
+        refreshLanguageRow();
         refreshThemeRow();
         refreshNotifRow();
         refreshInstructionsRow();
@@ -163,6 +167,89 @@ public class SettingsActivity extends AppCompatActivity {
     // -----------------------------------------------------------------
     // المظهر
     // -----------------------------------------------------------------
+
+    private void refreshLanguageRow() {
+        languageValue.setText(LocaleManager.labelRes(LocaleManager.get(this)));
+    }
+
+    private void showLanguageDialog() {
+        final String current = LocaleManager.get(this);
+        final String[] codes = {LocaleManager.LANG_AR, LocaleManager.LANG_EN, LocaleManager.LANG_SYSTEM};
+        final int[] titles = {R.string.ui_language_arabic, R.string.ui_language_english, R.string.ui_language_system};
+        final int[] descs = {R.string.ui_language_arabic_desc, R.string.ui_language_english_desc, R.string.ui_language_system_desc};
+        final android.app.Dialog[] holder = new android.app.Dialog[1];
+
+        android.widget.LinearLayout list = new android.widget.LinearLayout(this);
+        list.setOrientation(android.widget.LinearLayout.VERTICAL);
+        list.setPadding(Ui.dp(this, 4), Ui.dp(this, 6), Ui.dp(this, 4), Ui.dp(this, 2));
+
+        for (int i = 0; i < codes.length; i++) {
+            final String code = codes[i];
+            final boolean selected = code.equals(current);
+
+            android.widget.LinearLayout card = new android.widget.LinearLayout(this);
+            card.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+            card.setGravity(Gravity.CENTER_VERTICAL);
+            card.setBackgroundResource(selected ? R.drawable.bg_glass_chip_selected : R.drawable.bg_glass_chip);
+            card.setClickable(true);
+            card.setFocusable(true);
+            card.setMinimumHeight(Ui.dp(this, 64));
+            card.setPadding(Ui.dp(this, 18), Ui.dp(this, 12), Ui.dp(this, 18), Ui.dp(this, 12));
+            android.widget.LinearLayout.LayoutParams cardLp = new android.widget.LinearLayout.LayoutParams(
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+            cardLp.bottomMargin = Ui.dp(this, 10);
+            card.setLayoutParams(cardLp);
+
+            android.widget.LinearLayout texts = new android.widget.LinearLayout(this);
+            texts.setOrientation(android.widget.LinearLayout.VERTICAL);
+            texts.setLayoutParams(new android.widget.LinearLayout.LayoutParams(0,
+                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+            TextView title = new TextView(this);
+            title.setText(titles[i]);
+            title.setTextSize(16.5f);
+            title.setTypeface(title.getTypeface(), android.graphics.Typeface.BOLD);
+            title.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
+            title.setTextColor(selected ? getColor(R.color.white) : getColor(R.color.text_primary));
+
+            TextView desc = new TextView(this);
+            desc.setText(descs[i]);
+            desc.setTextSize(12.5f);
+            desc.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
+            desc.setTextColor(selected ? getColor(R.color.white) : getColor(R.color.text_secondary));
+            desc.setAlpha(selected ? 0.85f : 1f);
+
+            texts.addView(title);
+            texts.addView(desc);
+            card.addView(texts);
+
+            if (selected) {
+                android.widget.ImageView check = new android.widget.ImageView(this);
+                check.setImageResource(R.drawable.ic_check);
+                check.setColorFilter(getColor(R.color.white));
+                android.widget.LinearLayout.LayoutParams checkLp = new android.widget.LinearLayout.LayoutParams(
+                        Ui.dp(this, 22), Ui.dp(this, 22));
+                checkLp.setMarginStart(Ui.dp(this, 12));
+                check.setLayoutParams(checkLp);
+                card.addView(check);
+            }
+
+            card.setOnClickListener(v -> {
+                if (holder[0] != null) holder[0].dismiss();
+                if (!code.equals(current)) {
+                    LocaleManager.set(this, code);
+                }
+            });
+            list.addView(card);
+        }
+
+        holder[0] = new ClaudeDialog(this)
+                .setTitle(getString(R.string.ui_language_dialog_title))
+                .setMessage(getString(R.string.ui_language_dialog_desc))
+                .setView(list)
+                .setNegativeButton(getString(R.string.ui_language_cancel), null)
+                .show();
+    }
 
     private void refreshThemeRow() {
         themeValue.setText(ThemeManager.labelFor(ThemeManager.getCurrentMode(this)));

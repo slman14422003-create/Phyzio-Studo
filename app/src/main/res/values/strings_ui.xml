@@ -166,4 +166,14 @@
     <string name="ui_share">مشاركة</string>
     <string name="ui_add_to_favorites">إضافة للمفضلة</string>
     <string name="ui_zoom_in_out">تكبير/تصغير</string>
+    <string name="ui_language">اللغة</string>
+    <string name="ui_language_system">لغة الجهاز</string>
+    <string name="ui_language_system_desc">اتبع لغة النظام تلقائيًا</string>
+    <string name="ui_language_arabic">العربية</string>
+    <string name="ui_language_arabic_desc">واجهة من اليمين لليسار</string>
+    <string name="ui_language_english">English</string>
+    <string name="ui_language_english_desc">واجهة من اليسار لليمين</string>
+    <string name="ui_language_dialog_title">لغة التطبيق</string>
+    <string name="ui_language_dialog_desc">يُطبَّق التغيير فورًا على كل الشاشات.</string>
+    <string name="ui_language_cancel">إلغاء</string>
 </resources>

@@ -166,4 +166,14 @@
     <string name="ui_share">Share</string>
     <string name="ui_add_to_favorites">Add to favorites</string>
     <string name="ui_zoom_in_out">Zoom in / out</string>
+    <string name="ui_language">Language</string>
+    <string name="ui_language_system">Device language</string>
+    <string name="ui_language_system_desc">Follow the system language automatically</string>
+    <string name="ui_language_arabic">العربية</string>
+    <string name="ui_language_arabic_desc">Right-to-left interface</string>
+    <string name="ui_language_english">English</string>
+    <string name="ui_language_english_desc">Left-to-right interface</string>
+    <string name="ui_language_dialog_title">App language</string>
+    <string name="ui_language_dialog_desc">The change applies immediately on every screen.</string>
+    <string name="ui_language_cancel">Cancel</string>
 </resources>
