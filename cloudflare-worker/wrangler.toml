@@ -1,8 +1,0 @@
-name = "semo-files"
-main = "storage-worker.js"
-compatibility_date = "2025-01-01"
-
-[vars]
-GITHUB_REPO = "OWNER/REPO"   # غيّرها: اسم صاحب المستودع/اسم المستودع (يفضّل Private)
-GITHUB_BRANCH = "main"
-GITHUB_DIR = "files"
