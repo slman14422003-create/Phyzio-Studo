@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="IllustrationView">
+        <attr name="scene" format="enum">
+            <enum name="pulse" value="0" />
+            <enum name="spine" value="1" />
+            <enum name="exercise" value="2" />
+            <enum name="calendar" value="3" />
+            <enum name="patients" value="4" />
+            <enum name="ai" value="5" />
+            <enum name="cloud" value="6" />
+            <enum name="search" value="7" />
+            <enum name="gears" value="8" />
+            <enum name="book" value="9" />
+            <enum name="star" value="10" />
+            <enum name="doc" value="11" />
+            <enum name="clipboard" value="12" />
+            <enum name="shield" value="13" />
+            <enum name="walk" value="14" />
+        </attr>
+        <attr name="loop" format="boolean" />
+    </declare-styleable>
+</resources>

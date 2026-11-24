@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- PDF reader menu: one fixed zoom in/out item (a single glass pill holding both buttons, instead of two separate floating icons with no visual container), and the "More" button (⋮) in the same round icon-button style used in other screen headers; it opens a custom dropdown (popup_pdf_more_menu) built with the settings-row styles (Settings.Row) instead of the default Toolbar menu, which does not always follow the app identity on every device. -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_pdf_zoom"
+        android:title="@string/ui_zoom_in_out"
+        app:actionLayout="@layout/action_pdf_zoom_control"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_pdf_more"
+        android:title="@string/ui_more"
+        app:actionLayout="@layout/action_pdf_more_button"
+        app:showAsAction="always" />
+</menu>

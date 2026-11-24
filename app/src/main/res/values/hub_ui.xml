@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="pt_tab_patients">المرضى</string>
+    <string name="pt_tab_schedule">الجدول</string>
+    <string name="pt_tab_overview">نظرة عامة</string>
+    <string name="pt_tab_sessions">الجلسات</string>
+    <string name="pt_tab_plan">العلاج</string>
+    <string name="pt_tab_finance">المالية</string>
+    <string name="pt_summary_line">%1$d مريض · %2$d جلسة هذا الشهر · %3$s مستحقات</string>
+    <string name="pt_section_today">اليوم</string>
+    <string name="pt_section_upcoming">القادمون</string>
+    <string name="pt_section_no_appt">بدون موعد</string>
+    <string name="pt_currency_menu">تغيير رمز العملة</string>
+    <string name="pt_ask_ai_title">اسأل Semo AI عن هذا المريض</string>
+    <string name="sched_today_title">اليوم · %1$s %2$s</string>
+    <string name="sched_day_title">%1$s %2$s</string>
+    <string name="sched_now">الآن %1$s</string>
+    <string name="sched_empty_day">لا توجد جلسات في هذا اليوم</string>
+    <string name="sched_status_done">تمت</string>
+    <string name="sched_status_upcoming">قادمة</string>
+    <string name="sched_status_unlogged">غير مسجلة</string>
+    <string name="sched_add_session_desc">إضافة جلسة</string>
+</resources>

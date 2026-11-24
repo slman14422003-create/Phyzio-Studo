@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Design tokens: spacing -->
+    <dimen name="space_4">4dp</dimen>
+    <dimen name="space_8">8dp</dimen>
+    <dimen name="space_12">12dp</dimen>
+    <dimen name="space_16">16dp</dimen>
+    <dimen name="space_24">24dp</dimen>
+
+    <!-- Design tokens: corner radii -->
+    <dimen name="radius_small">8dp</dimen>
+    <dimen name="radius_medium">16dp</dimen>
+    <dimen name="radius_large">26dp</dimen>
+
+    <!-- Design tokens: text sizes -->
+    <dimen name="text_caption">12sp</dimen>
+    <dimen name="text_body">15sp</dimen>
+    <dimen name="text_title">17sp</dimen>
+    <dimen name="text_header">20sp</dimen>
+
+    <!-- Accessibility / component minimums -->
+    <dimen name="touch_target_min">48dp</dimen>
+    <dimen name="selection_item_min_width">56dp</dimen>
+</resources>

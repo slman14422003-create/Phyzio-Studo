@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="vs_section">القراءة الصوتية</string>
+    <string name="vs_engine">محرك الصوت</string>
+    <string name="vs_e_system">صوت النظام (Google)</string>
+    <string name="vs_e_gemini">Gemini (الأفضل)</string>
+    <string name="vs_e_edge">Edge العصبي (مجاني)</string>
+    <string name="vs_e_azure">Azure Speech</string>
+    <string name="vs_e_eleven">ElevenLabs</string>
+    <string name="vs_key">مفتاح API</string>
+    <string name="vs_key_saved">محفوظ</string>
+    <string name="vs_key_missing">غير مضبوط، اضغط للصق المفتاح</string>
+    <string name="vs_region">منطقة Azure</string>
+    <string name="vs_voice">الصوت</string>
+    <string name="vs_custom_id">معرّف صوت آخر</string>
+    <string name="vs_tashkeel">تشكيل تلقائي</string>
+    <string name="vs_tashkeel_sub">يشكّل النص بواسطة Gemini قبل القراءة (يحتاج مفتاح Gemini)</string>
+    <string name="vs_tashkeel_need">أضف مفتاح Gemini أولاً من محرك Gemini</string>
+    <string name="vs_proxy">عنوان الوسيط (Worker)</string>
+    <string name="vs_proxy_none">بدون وسيط</string>
+    <string name="vs_worker">نسخ كود الوسيط</string>
+    <string name="vs_worker_sub">لو Google أو غيره محجوب عندك</string>
+    <string name="vs_worker_copied">تم نسخ كود الـ Worker، الصقه في Cloudflare</string>
+    <string name="vs_test">تجربة الصوت</string>
+    <string name="vs_test_sub">يولّد جملة قصيرة ويشغّلها</string>
+    <string name="vs_test_ok">يعمل</string>
+    <string name="vs_testing">جارٍ التوليد…</string>
+    <string name="vs_steps">خطوات التفعيل</string>
+    <string name="vs_steps_sub">شرح كامل للمحرك المختار</string>
+    <string name="vs_preload">التحميل المسبق</string>
+    <string name="vs_preload_auto">تلقائي</string>
+    <string name="vs_preload_n">%d مقاطع قادمة</string>
+    <string name="vs_cache">الصوت المخزّن</string>
+    <string name="vs_cache_cleared">تم المسح</string>
+
+    <string name="vs_steps_system">لا يحتاج تفعيل. يستخدم صوت Google المثبّت على الجهاز.</string>
+    <string name="vs_steps_gemini">1) من متصفح الجوال افتح aistudio.google.com/apikey وسجّل بحساب Google.\n2) اضغط Create API key ثم Create API key in new project.\n3) انسخ المفتاح (يبدأ بـ AIza).\n4) في التطبيق: الإعدادات ← القراءة الصوتية ← المحرك: Gemini ← مفتاح API ← الصق ← موافق.\n5) اختر الصوت (Kore جيد للراوي، Charon أعمق).\n6) اضغط تجربة الصوت. لو ظهر خطأ HTTP 403 أو User location is not supported فالمنطقة محجوبة: استخدم الوسيط (الخطوات تحت).\n\nالوسيط (Cloudflare Worker):\nأ) افتح dash.cloudflare.com ← Workers &amp; Pages ← Create ← Hello World ← Deploy.\nب) Edit code وامسح كل الكود.\nج) في التطبيق اضغط نسخ كود الوسيط ثم الصقه في المحرر ← Deploy.\nد) انسخ رابط الـ Worker (مثل https://name.workers.dev) والصقه في عنوان الوسيط بالتطبيق.\n\nملاحظة: الطبقة المجانية لـ Gemini TTS محدودة بعدد الطلبات في الدقيقة، فأول قراءة لنص طويل قد تتأخر بين الفقرات، وبعدها تُقرأ المخزّنة فوراً.</string>
+    <string name="vs_steps_edge">1) لا يحتاج مفتاح.\n2) الإعدادات ← القراءة الصوتية ← المحرك: Edge العصبي.\n3) اختر الصوت (ar-SY-AmanyNeural سوري للنساء، ar-SA-HamedNeural سعودي للرجال).\n4) اضغط تجربة الصوت.\n\nلو فشل بسبب حجب الخدمة: انشر الوسيط كما في خطوات Gemini (أ إلى د) وضع رابطه في عنوان الوسيط.\n\nتنبيه: الخدمة غير رسمية وقد تتوقف أو تتغير في أي وقت، فاجعل Gemini المحرك الأساسي واترك هذا احتياطي.</string>
+    <string name="vs_steps_azure">1) من المتصفح افتح portal.azure.com وسجّل حساباً (يطلب بطاقة تحقق).\n2) Create a resource ← ابحث Speech ← Create.\n3) اختر Pricing tier: Free F0 (500 ألف حرف شهرياً) ثم Review + create ← Create.\n4) بعد الإنشاء: Go to resource ← Keys and Endpoint.\n5) انسخ KEY 1 وانتبه لاسم Location/Region (مثل westeurope).\n6) في التطبيق: المحرك: Azure Speech ← مفتاح API ← الصق KEY 1.\n7) منطقة Azure: اختر نفس منطقة المورد (لو منطقتك غير موجودة بالقائمة اختر الأقرب وأنشئ المورد فيها).\n8) اختر الصوت ثم اضغط تجربة الصوت.</string>
+    <string name="vs_steps_eleven">1) من المتصفح افتح elevenlabs.io وسجّل حساباً مجانياً.\n2) اضغط صورة الحساب ← API Keys ← Create API Key، فعّل صلاحية Text to Speech ثم انسخ المفتاح.\n3) في التطبيق: المحرك: ElevenLabs ← مفتاح API ← الصق.\n4) اختر صوتاً من القائمة، أو من موقع ElevenLabs قسم Voices اختر صوتاً يدعم العربية وانسخ Voice ID ثم اختر معرّف صوت آخر والصقه.\n5) اضغط تجربة الصوت.\n\nتنبيه: الطبقة المجانية حوالي 10 آلاف حرف شهرياً فقط (بضع صفحات فقط)، وقد يمنع الحساب المجاني الاستخدام عبر VPN أو وسيط.</string>
+
+    <string name="vs_cloud_warn">تنبيه: نص الـ PDF يُرسَل إلى طرف ثالث لتحويله إلى صوت</string>
+    <string name="vs_edge_note">خدمة Edge غير رسمية وقد تتوقف أو تتغير في أي وقت</string>
+    <string name="vs_test_sentence">السَّلامُ عَلَيْكُم، هَذَا اخْتِبَارٌ لِصَوْتِ القِرَاءَةِ الصَّوْتِيَّةِ.</string>
+    <string name="vs_prompt_read">اقرأ النص التالي بصوت راوٍ عربي واضح وهادئ، بتشكيل صحيح ونطق سليم، ولا تضف أي كلمة:</string>
+    <string name="vs_prompt_tashkeel">أضف التشكيل الكامل والصحيح (الفتحة والضمة والكسرة والسكون والشدة والتنوين) لهذا النص العربي. أعد النص المشكول فقط بدون أي شرح وبدون تغيير أي حرف، وحافظ على الأسطر والترقيم كما هي:</string>
+    <string name="vs_read_aloud">القراءة بصوت عالٍ</string>
+    <string name="vs_play">تشغيل</string>
+    <string name="vs_pause">إيقاف مؤقت</string>
+    <string name="vs_stop">إيقاف</string>
+    <string name="vs_prev_para">الفقرة السابقة</string>
+    <string name="vs_next_para">الفقرة التالية</string>
+    <string name="vs_speed_fmt">%.1f×</string>
+    <string name="vs_speed_desc">سرعة القراءة</string>
+    <string name="vs_no_text">لا يوجد نص قابل للقراءة في هذه الصفحة (قد تكون صورة ممسوحة ضوئيًا)</string>
+    <string name="vs_loading">جارٍ تجهيز القراءة…</string>
+    <string name="vs_tts_unavailable">صوت النظام غير متوفر على هذا الجهاز</string>
+    <string name="vs_tts_lang_missing">لغة النص غير مدعومة في صوت النظام، ثبّت حزمة الصوت من إعدادات الجهاز</string>
+    <string name="vs_key_needed">أضف مفتاح هذا المحرك من الإعدادات أولاً</string>
+    <string name="vs_end">انتهت القراءة</string>
+    <string name="vs_open_settings">الإعدادات</string>
+</resources>

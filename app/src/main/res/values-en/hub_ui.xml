@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="pt_tab_patients">Patients</string>
+    <string name="pt_tab_schedule">Schedule</string>
+    <string name="pt_tab_overview">Overview</string>
+    <string name="pt_tab_sessions">Sessions</string>
+    <string name="pt_tab_plan">Plan</string>
+    <string name="pt_tab_finance">Finance</string>
+    <string name="pt_summary_line">%1$d patients · %2$d sessions this month · %3$s due</string>
+    <string name="pt_section_today">Today</string>
+    <string name="pt_section_upcoming">Upcoming</string>
+    <string name="pt_section_no_appt">No appointment</string>
+    <string name="pt_currency_menu">Change currency symbol</string>
+    <string name="pt_ask_ai_title">Ask Semo AI about this patient</string>
+    <string name="sched_today_title">Today · %1$s %2$s</string>
+    <string name="sched_day_title">%1$s %2$s</string>
+    <string name="sched_now">Now %1$s</string>
+    <string name="sched_empty_day">No sessions on this day</string>
+    <string name="sched_status_done">Done</string>
+    <string name="sched_status_upcoming">Upcoming</string>
+    <string name="sched_status_unlogged">Not logged</string>
+    <string name="sched_add_session_desc">Add session</string>
+</resources>

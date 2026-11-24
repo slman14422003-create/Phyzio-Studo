@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "More" menu of the PDF reader: a scrollable glass card (since the number of rows grew) using the same styles as the settings rows. Shown inside a custom PopupWindow from PdfViewerActivity (see showMoreMenu). -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="264dp"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_popup_menu"
+    android:clipToOutline="true"
+    android:overScrollMode="ifContentScrolls"
+    android:scrollbars="none">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp">
+
+        <LinearLayout
+            android:id="@+id/row_pdf_ask_ai"
+            style="@style/Settings.Row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="52dp">
+
+            <ImageView
+                style="@style/Settings.RowIcon"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:tint="@color/claude_orange"
+                android:src="@drawable/ic_sparkle" />
+
+            <TextView
+                style="@style/Settings.RowTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/ui_ask_ai_about_file"
+                android:textSize="14.5sp" />
+        </LinearLayout>
+
+        <View style="@style/Settings.Divider" />
+
+        <LinearLayout
+            android:id="@+id/row_pdf_read_aloud"
+            style="@style/Settings.Row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="52dp">
+
+            <ImageView
+                style="@style/Settings.RowIcon"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_volume" />
+
+            <TextView
+                style="@style/Settings.RowTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/vs_read_aloud"
+                android:textSize="14.5sp" />
+        </LinearLayout>
+
+        <View style="@style/Settings.Divider" />
+
+        <LinearLayout
+            android:id="@+id/row_pdf_search"
+            style="@style/Settings.Row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="52dp">
+
+            <ImageView
+                style="@style/Settings.RowIcon"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_search" />
+
+            <TextView
+                style="@style/Settings.RowTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/ui_search_in_file"
+                android:textSize="14.5sp" />
+        </LinearLayout>
+
+        <View style="@style/Settings.Divider" />
+
+        <LinearLayout
+            android:id="@+id/row_pdf_bookmark"
+            style="@style/Settings.Row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="52dp">
+
+            <ImageView
+                style="@style/Settings.RowIcon"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_bookmark" />
+
+            <TextView
+                android:id="@+id/txt_pdf_bookmark"
+                style="@style/Settings.RowTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/ui_add_page_bookmark"
+                android:textSize="14.5sp" />
+        </LinearLayout>
+
+        <View style="@style/Settings.Divider" />
+
+        <LinearLayout
+            android:id="@+id/row_pdf_bookmarks"
+            style="@style/Settings.Row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="52dp">
+
+            <ImageView
+                style="@style/Settings.RowIcon"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_clipboard" />
+
+            <TextView
+                style="@style/Settings.RowTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/ui_bookmarks"
+                android:textSize="14.5sp" />
+        </LinearLayout>
+
+        <View style="@style/Settings.Divider" />
+
+        <LinearLayout
+            android:id="@+id/row_pdf_goto"
+            style="@style/Settings.Row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="52dp">
+
+            <ImageView
+                style="@style/Settings.RowIcon"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_arrow_up" />
+
+            <TextView
+                style="@style/Settings.RowTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/ui_go_to_page"
+                android:textSize="14.5sp" />
+        </LinearLayout>
+
+        <View style="@style/Settings.Divider" />
+
+        <LinearLayout
+            android:id="@+id/row_pdf_night_pages"
+            style="@style/Settings.Row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="52dp">
+
+            <ImageView
+                style="@style/Settings.RowIcon"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_moon" />
+
+            <TextView
+                android:id="@+id/txt_pdf_night_pages"
+                style="@style/Settings.RowTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/ui_page_mode_normal"
+                android:textSize="14.5sp" />
+        </LinearLayout>
+
+        <View style="@style/Settings.Divider" />
+
+        <LinearLayout
+            android:id="@+id/row_pdf_translate_page"
+            style="@style/Settings.Row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="52dp">
+
+            <ImageView
+                style="@style/Settings.RowIcon"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_globe" />
+
+            <TextView
+                style="@style/Settings.RowTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/ui_translate_page"
+                android:textSize="14.5sp" />
+        </LinearLayout>
+
+        <View style="@style/Settings.Divider" />
+
+        <LinearLayout
+            android:id="@+id/row_pdf_translate_full"
+            style="@style/Settings.Row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="52dp">
+
+            <ImageView
+                style="@style/Settings.RowIcon"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_pdf" />
+
+            <TextView
+                style="@style/Settings.RowTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/ui_translate_whole_pdf"
+                android:textSize="14.5sp" />
+        </LinearLayout>
+
+        <View style="@style/Settings.Divider" />
+
+        <LinearLayout
+            android:id="@+id/row_pdf_save_copy"
+            style="@style/Settings.Row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="52dp">
+
+            <ImageView
+                style="@style/Settings.RowIcon"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_download" />
+
+            <TextView
+                style="@style/Settings.RowTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/ui_save_copy_to_device"
+                android:textSize="14.5sp" />
+        </LinearLayout>
+
+        <View style="@style/Settings.Divider" />
+
+        <LinearLayout
+            android:id="@+id/row_pdf_open_external"
+            style="@style/Settings.Row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="52dp">
+
+            <ImageView
+                style="@style/Settings.RowIcon"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_share_out" />
+
+            <TextView
+                style="@style/Settings.RowTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/ui_open_in_other_app"
+                android:textSize="14.5sp" />
+        </LinearLayout>
+
+        <View style="@style/Settings.Divider" />
+
+        <LinearLayout
+            android:id="@+id/row_pdf_pick_another"
+            style="@style/Settings.Row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="52dp">
+
+            <ImageView
+                style="@style/Settings.RowIcon"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_folder" />
+
+            <TextView
+                style="@style/Settings.RowTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/ui_open_other_pdf"
+                android:textSize="14.5sp" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

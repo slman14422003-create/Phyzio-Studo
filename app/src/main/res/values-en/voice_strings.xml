@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="vs_section">Reading voice</string>
+    <string name="vs_engine">Voice engine</string>
+    <string name="vs_e_system">System voice (Google)</string>
+    <string name="vs_e_gemini">Gemini (best)</string>
+    <string name="vs_e_edge">Edge neural (free)</string>
+    <string name="vs_e_azure">Azure Speech</string>
+    <string name="vs_e_eleven">ElevenLabs</string>
+    <string name="vs_key">API key</string>
+    <string name="vs_key_saved">Saved</string>
+    <string name="vs_key_missing">Not set, tap to paste the key</string>
+    <string name="vs_region">Azure region</string>
+    <string name="vs_voice">Voice</string>
+    <string name="vs_custom_id">Other voice ID</string>
+    <string name="vs_tashkeel">Auto diacritics</string>
+    <string name="vs_tashkeel_sub">Adds diacritics with Gemini before reading (needs a Gemini key)</string>
+    <string name="vs_tashkeel_need">Add a Gemini key first from the Gemini engine</string>
+    <string name="vs_proxy">Proxy address (Worker)</string>
+    <string name="vs_proxy_none">No proxy</string>
+    <string name="vs_worker">Copy proxy code</string>
+    <string name="vs_worker_sub">If Google or others are blocked for you</string>
+    <string name="vs_worker_copied">Worker code copied, paste it in Cloudflare</string>
+    <string name="vs_test">Test voice</string>
+    <string name="vs_test_sub">Generates a short sentence and plays it</string>
+    <string name="vs_test_ok">Works</string>
+    <string name="vs_testing">Generating…</string>
+    <string name="vs_steps">Activation steps</string>
+    <string name="vs_steps_sub">Full guide for the chosen engine</string>
+    <string name="vs_preload">Preload</string>
+    <string name="vs_preload_auto">Automatic</string>
+    <string name="vs_preload_n">%d pieces ahead</string>
+    <string name="vs_cache">Stored audio</string>
+    <string name="vs_cache_cleared">Cleared</string>
+
+    <string name="vs_steps_system">No setup needed. Uses the Google voice installed on the device.</string>
+    <string name="vs_steps_gemini">1) In your phone browser open aistudio.google.com/apikey and sign in with Google.\n2) Tap Create API key, then Create API key in new project.\n3) Copy the key (starts with AIza).\n4) In the app: Settings > Reading voice > Engine: Gemini > API key > paste > OK.\n5) Pick a voice (Kore suits a narrator, Charon is deeper).\n6) Tap Test voice. If you get HTTP 403 or User location is not supported, your region is blocked: use the proxy (steps below).\n\nProxy (Cloudflare Worker):\na) Open dash.cloudflare.com > Workers &amp; Pages > Create > Hello World > Deploy.\nb) Edit code and delete all the code.\nc) In the app tap Copy proxy code, paste it in the editor > Deploy.\nd) Copy the Worker link (like https://name.workers.dev) and paste it into Proxy address in the app.\n\nNote: the free Gemini TTS tier limits requests per minute, so the first read of a long text may pause between paragraphs; stored paragraphs then play instantly.</string>
+    <string name="vs_steps_edge">1) No key needed.\n2) Settings > Reading voice > Engine: Edge neural.\n3) Pick a voice (ar-SY-AmanyNeural Syrian female, ar-SA-HamedNeural Saudi male).\n4) Tap Test voice.\n\nIf it fails because the service is blocked: deploy the proxy as in the Gemini steps (a to d) and put its link in Proxy address.\n\nNote: this service is unofficial and may stop or change any time, so keep Gemini as the main engine and this as a backup.</string>
+    <string name="vs_steps_azure">1) In the browser open portal.azure.com and sign up (a card is needed for verification).\n2) Create a resource > search Speech > Create.\n3) Pick Pricing tier Free F0 (500k characters a month), then Review + create > Create.\n4) When done: Go to resource > Keys and Endpoint.\n5) Copy KEY 1 and note the Location/Region (like westeurope).\n6) In the app: Engine: Azure Speech > API key > paste KEY 1.\n7) Azure region: choose the same region as the resource (if yours is not listed, pick the closest and create the resource there).\n8) Pick a voice and tap Test voice.</string>
+    <string name="vs_steps_eleven">1) In the browser open elevenlabs.io and create a free account.\n2) Tap your profile > API Keys > Create API Key, enable Text to Speech, copy the key.\n3) In the app: Engine: ElevenLabs > API key > paste.\n4) Pick a voice from the list, or from the ElevenLabs Voices page choose an Arabic-capable voice, copy its Voice ID, then pick Other voice ID and paste it.\n5) Tap Test voice.\n\nNote: the free tier is only about 10k characters a month (a few pages), and free accounts may be blocked when using a VPN or proxy.</string>
+
+    <string name="vs_cloud_warn">Note: the PDF text is sent to a third party to turn it into audio</string>
+    <string name="vs_edge_note">The Edge service is unofficial and may stop or change at any time</string>
+    <string name="vs_test_sentence">Peace be upon you, this is a test of the read aloud voice.</string>
+    <string name="vs_prompt_read">Read the following text aloud in a clear, calm narrator voice with correct pronunciation, and do not add any word:</string>
+    <string name="vs_prompt_tashkeel">Add full and correct diacritics (fatha, damma, kasra, sukun, shadda, tanwin) to this Arabic text. Return only the vocalized text, with no explanation and without changing any letter, and keep line breaks and punctuation as they are:</string>
+    <string name="vs_read_aloud">Read aloud</string>
+    <string name="vs_play">Play</string>
+    <string name="vs_pause">Pause</string>
+    <string name="vs_stop">Stop</string>
+    <string name="vs_prev_para">Previous paragraph</string>
+    <string name="vs_next_para">Next paragraph</string>
+    <string name="vs_speed_fmt">%.1f×</string>
+    <string name="vs_speed_desc">Reading speed</string>
+    <string name="vs_no_text">No readable text on this page (it may be a scanned image)</string>
+    <string name="vs_loading">Preparing to read…</string>
+    <string name="vs_tts_unavailable">The system voice is not available on this device</string>
+    <string name="vs_tts_lang_missing">The text language is not supported by the system voice, install the voice pack from device settings</string>
+    <string name="vs_key_needed">Add this engine key in Settings first</string>
+    <string name="vs_end">Finished reading</string>
+    <string name="vs_open_settings">Settings</string>
+</resources>

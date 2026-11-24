@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_reduce_motion">تقليل الحركة</string>
+    <string name="settings_reduce_motion_sub">إيقاف الحركات والانتقالات والرسوم المتحركة في التطبيق</string>
+</resources>

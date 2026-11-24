@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_clear_chat"
+        android:icon="@drawable/ic_trash"
+        android:title="@string/ui_clear_chat"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_deep_research"
+        android:checkable="true"
+        android:title="@string/menu_deep_research"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_digest"
+        android:title="@string/menu_digest"
+        app:showAsAction="never" />
+</menu>
