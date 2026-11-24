@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A single glass pill (same bg_glass_chip used by the other chips) holding the zoom-out and zoom-in buttons in one container; each button uses the round icon-button ripple (bg_icon_button) used in screen headers. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="40dp"
+    android:layout_gravity="center_vertical"
+    android:background="@drawable/bg_glass_chip"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="2dp"
+    android:paddingEnd="2dp">
+
+    <ImageButton
+        android:id="@+id/btn_pdf_zoom_out"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:background="@drawable/bg_icon_button"
+        android:contentDescription="@string/ui_zoom_out"
+        android:padding="8dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_minus"
+        android:tint="@color/text_primary" />
+
+    <View
+        android:layout_width="1dp"
+        android:layout_height="18dp"
+        android:background="@color/glass_border_soft" />
+
+    <ImageButton
+        android:id="@+id/btn_pdf_zoom_in"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:background="@drawable/bg_icon_button"
+        android:contentDescription="@string/ui_zoom_in"
+        android:padding="8dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_plus"
+        android:tint="@color/text_primary" />
+</LinearLayout>

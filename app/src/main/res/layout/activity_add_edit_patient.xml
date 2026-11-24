@@ -1,0 +1,347 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Add / edit patient data, Claude style, with the weekly session schedule (days + time). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_app_gradient"
+    android:orientation="vertical">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        style="@style/Phizyo.Toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        app:navigationIcon="@drawable/ic_close">
+
+        <TextView
+            android:id="@+id/toolbar_title"
+            style="@style/Phizyo.HeaderTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="@string/ui_new_patient" />
+    </com.google.android.material.appbar.MaterialToolbar>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:fillViewport="true"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="@dimen/space_16"
+            android:paddingTop="6dp"
+            android:paddingEnd="@dimen/space_16"
+            android:paddingBottom="32dp">
+
+            <TextView
+                style="@style/Phizyo.FormSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_4"
+                android:text="@string/ui_basic_info" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_settings_group"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <TextView
+                    style="@style/Phizyo.FormLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="0dp"
+                    android:text="@string/ui_full_name_req" />
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/field_name"
+                    style="@style/Phizyo.FormInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textPersonName|textCapWords" />
+
+                <TextView
+                    style="@style/Phizyo.FormLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/ui_phone_number" />
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/field_phone"
+                    style="@style/Phizyo.FormInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="phone"
+                    android:textDirection="ltr" />
+
+                <TextView
+                    style="@style/Phizyo.FormLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/ui_age_years" />
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/field_age"
+                    style="@style/Phizyo.FormInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:textDirection="ltr"
+                    android:maxLength="3" />
+
+                <TextView
+                    style="@style/Phizyo.FormLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/ui_gender" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/gender_male"
+                        style="@style/Phizyo.DayChip"
+                        android:layout_width="0dp"
+                        android:layout_height="@dimen/touch_target_min"
+                        android:layout_marginStart="0dp"
+                        android:text="@string/ui_male" />
+
+                    <TextView
+                        android:id="@+id/gender_female"
+                        style="@style/Phizyo.DayChip"
+                        android:layout_width="0dp"
+                        android:layout_height="@dimen/touch_target_min"
+                        android:layout_marginEnd="0dp"
+                        android:text="@string/ui_female" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <TextView
+                style="@style/Phizyo.FormSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="@string/ui_session_schedule" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_settings_group"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <TextView
+                    style="@style/Phizyo.FormLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="0dp"
+                    android:text="@string/ui_weekly_session_days" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/day_sat"
+                        style="@style/Phizyo.DayChip"
+                        android:layout_width="0dp"
+                        android:layout_height="@dimen/touch_target_min"
+                        android:text="@string/ui_day_sat" />
+
+                    <TextView
+                        android:id="@+id/day_sun"
+                        style="@style/Phizyo.DayChip"
+                        android:layout_width="0dp"
+                        android:layout_height="@dimen/touch_target_min"
+                        android:text="@string/ui_day_sun" />
+
+                    <TextView
+                        android:id="@+id/day_mon"
+                        style="@style/Phizyo.DayChip"
+                        android:layout_width="0dp"
+                        android:layout_height="@dimen/touch_target_min"
+                        android:text="@string/ui_day_mon" />
+
+                    <TextView
+                        android:id="@+id/day_tue"
+                        style="@style/Phizyo.DayChip"
+                        android:layout_width="0dp"
+                        android:layout_height="@dimen/touch_target_min"
+                        android:text="@string/ui_day_tue" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_8"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/day_wed"
+                        style="@style/Phizyo.DayChip"
+                        android:layout_width="0dp"
+                        android:layout_height="@dimen/touch_target_min"
+                        android:text="@string/ui_day_wed" />
+
+                    <TextView
+                        android:id="@+id/day_thu"
+                        style="@style/Phizyo.DayChip"
+                        android:layout_width="0dp"
+                        android:layout_height="@dimen/touch_target_min"
+                        android:text="@string/ui_day_thu" />
+
+                    <TextView
+                        android:id="@+id/day_fri"
+                        style="@style/Phizyo.DayChip"
+                        android:layout_width="0dp"
+                        android:layout_height="@dimen/touch_target_min"
+                        android:text="@string/ui_day_fri" />
+
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="46dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="@dimen/space_4"
+                        android:layout_marginEnd="@dimen/space_4" />
+                </LinearLayout>
+
+                <TextView
+                    style="@style/Phizyo.FormLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/ui_session_time" />
+
+                <LinearLayout
+                    android:id="@+id/session_time_row"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_input_field"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground"
+                    android:gravity="center_vertical"
+                    android:minHeight="52dp"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/space_16"
+                    android:paddingEnd="@dimen/space_8">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_history"
+                        android:tint="@color/text_secondary" />
+
+                    <TextView
+                        android:id="@+id/session_time_text"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/space_12"
+                        android:layout_weight="1"
+                        android:text="@string/ui_pick_time"
+                        android:textAlignment="viewStart"
+                        android:textColor="@color/text_tertiary"
+                        android:textDirection="rtl"
+                        android:textSize="15.5sp" />
+
+                    <ImageButton
+                        android:id="@+id/session_time_clear"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/bg_icon_button"
+                        android:contentDescription="@string/ui_clear_time"
+                        android:padding="11dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_close"
+                        android:tint="@color/text_tertiary"
+                        android:visibility="gone" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <TextView
+                style="@style/Phizyo.FormSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="@string/ui_status_and_billing" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_settings_group"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <TextView
+                    style="@style/Phizyo.FormLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="0dp"
+                    android:text="@string/ui_chief_complaint" />
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/field_diagnosis"
+                    style="@style/Phizyo.FormInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textMultiLine|textCapSentences"
+                    android:gravity="top"
+                    android:minLines="2" />
+
+                <TextView
+                    style="@style/Phizyo.FormLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/ui_default_session_price" />
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/field_fee"
+                    style="@style/Phizyo.FormInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal"
+                    android:textDirection="ltr" />
+
+                <TextView
+                    style="@style/Phizyo.FormLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/ui_notes" />
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/field_notes"
+                    style="@style/Phizyo.FormInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textMultiLine|textCapSentences"
+                    android:gravity="top"
+                    android:minLines="3" />
+            </LinearLayout>
+
+                <TextView
+                    android:id="@+id/btn_save"
+                    style="@style/Phizyo.PillPrimary"
+                    android:layout_width="match_parent"
+                    android:layout_height="54dp"
+                    android:text="@string/ui_save" />
+
+                <TextView
+                    android:id="@+id/btn_cancel"
+                    style="@style/Phizyo.PillSecondary"
+                    android:layout_width="match_parent"
+                    android:layout_height="54dp"
+                    android:text="@string/ui_cancel" />
+
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

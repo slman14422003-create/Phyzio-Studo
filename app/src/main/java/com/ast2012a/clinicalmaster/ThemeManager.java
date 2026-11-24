@@ -1,0 +1,54 @@
+package com.ast2012a.clinicalmaster;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+
+import androidx.appcompat.app.AppCompatDelegate;
+
+/**
+ * يدير الوضع الليلي/النهاري للتطبيق كله من مكان واحد.
+ * ثلاث حالات: "light" (نهاري دائمًا) - "dark" (ليلي دائمًا) - "system" (حسب إعداد الجهاز).
+ * القيمة تُحفظ في SharedPreferences وتُطبَّق فورًا عند بدء التطبيق (من ClinicalMasterApp)
+ * وأيضًا عند أي تبديل يدوي من المستخدم (من شاشة الإعدادات أو زر التبديل السريع).
+ */
+public class ThemeManager {
+
+    private static final String PREFS = "settings_prefs";
+    private static final String KEY_THEME_MODE = "theme_mode";
+
+    public static final String MODE_LIGHT = "light";
+    public static final String MODE_DARK = "dark";
+    public static final String MODE_SYSTEM = "system";
+
+    /** يُستدعى مرة واحدة من Application.onCreate() قبل ما تُفتح أي شاشة. */
+    public static void applySavedTheme(Context context) {
+        AppCompatDelegate.setDefaultNightMode(modeToConstant(getCurrentMode(context)));
+    }
+
+    public static String getCurrentMode(Context context) {
+        return prefs(context).getString(KEY_THEME_MODE, MODE_SYSTEM);
+    }
+
+    public static void setMode(Context context, String mode) {
+        prefs(context).edit().putString(KEY_THEME_MODE, mode).apply();
+        AppCompatDelegate.setDefaultNightMode(modeToConstant(mode));
+    }
+
+    public static String labelFor(String mode) {
+        switch (mode) {
+            case MODE_LIGHT: return "نهاري";
+            case MODE_DARK: return "ليلي";
+            default: return "حسب الجهاز";
+        }
+    }
+
+    private static int modeToConstant(String mode) {
+        if (MODE_LIGHT.equals(mode)) return AppCompatDelegate.MODE_NIGHT_NO;
+        if (MODE_DARK.equals(mode)) return AppCompatDelegate.MODE_NIGHT_YES;
+        return AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM;
+    }
+
+    private static SharedPreferences prefs(Context context) {
+        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    }
+}

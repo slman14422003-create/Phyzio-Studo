@@ -1,0 +1,650 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Main screen, redesigned in the Claude app style: top bar (small logo + app name + settings icon button); welcome screen (large star, serif greeting, suggestions as pill rows); bottom area with icon shortcuts (instead of emoji) + pill search field + "+" button. All IDs used by MainActivity.java were kept. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_app_gradient"
+    android:orientation="vertical">
+
+    <!-- ============== Top bar ============== -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:background="@drawable/bg_top_bar_modern"
+        android:elevation="0dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="18dp"
+        android:paddingEnd="@dimen/space_8">
+
+        <FrameLayout
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="@drawable/bg_avatar_gradient">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_pulse"
+                android:tint="@color/white" />
+        </FrameLayout>
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:fontFamily="serif"
+            android:text="Phizyo Studio"
+            android:textAlignment="viewStart"
+            android:textColor="@color/text_primary"
+            android:textDirection="ltr"
+            android:textSize="@dimen/text_header"
+            android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/btn_cloud_storage"
+            style="@style/Phizyo.IconButton"
+            android:layout_width="@dimen/touch_target_min"
+            android:layout_height="@dimen/touch_target_min"
+            android:contentDescription="@string/ui_cloud_files"
+            android:src="@drawable/ic_cloud" />
+
+        <ImageButton
+            android:id="@+id/btn_settings"
+            style="@style/Phizyo.IconButton"
+            android:layout_width="@dimen/touch_target_min"
+            android:layout_height="@dimen/touch_target_min"
+            android:contentDescription="@string/ui_settings"
+            android:src="@drawable/ic_sliders" />
+    </LinearLayout>
+
+    <!-- ============== Content area (flexible) ============== -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <!-- Home screen: greeting + assistant + today's patients + quick access + search examples -->
+        <ScrollView
+            android:id="@+id/empty_hint_container"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="@dimen/space_16"
+                android:paddingTop="20dp"
+                android:paddingEnd="@dimen/space_16"
+                android:paddingBottom="@dimen/space_24">
+
+                <!-- Greeting + date -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/space_4"
+                    android:paddingEnd="@dimen/space_4">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/home_date"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textAlignment="viewStart"
+                            android:textColor="@color/text_tertiary"
+                            android:textDirection="rtl"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/empty_hint_title"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:fontFamily="serif"
+                            android:lineSpacingExtra="3dp"
+                            android:text="@string/ui_home_greeting"
+                            android:textAlignment="viewStart"
+                            android:textColor="@color/text_primary"
+                            android:textDirection="rtl"
+                            android:textSize="24sp" />
+                    </LinearLayout>
+
+                    <FrameLayout
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:background="@drawable/bg_hero_halo">
+
+                        <ImageView
+                            android:layout_width="26dp"
+                            android:layout_height="26dp"
+                            android:layout_gravity="center"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/ic_sparkle"
+                            android:tint="@color/claude_orange" />
+                    </FrameLayout>
+                </LinearLayout>
+
+                <!-- Smart assistant -->
+                <TextView
+                    android:id="@+id/btn_ai_assistant"
+                    android:layout_width="match_parent"
+                    android:layout_height="64dp"
+                    android:layout_marginTop="18dp"
+                    android:background="@drawable/bg_ai_card"
+                    android:clickable="true"
+                    android:drawableStart="@drawable/ic_sparkle"
+                    android:drawableEnd="@drawable/ic_chevron_end"
+                    android:drawablePadding="14dp"
+                    android:drawableTint="@color/white"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="18dp"
+                    android:stateListAnimator="@animator/press_scale_xy"
+                    android:text="@string/ui_ask_semo"
+                    android:textAlignment="viewStart"
+                    android:textColor="@color/white"
+                    android:textDirection="rtl"
+                    android:textSize="16.5sp"
+                    android:textStyle="bold" />
+
+                <!-- Patients card (filled from MainActivity.loadPatientsPreview) -->
+                <LinearLayout
+                    android:id="@+id/today_patients_card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/bg_tile"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:orientation="vertical"
+                    android:padding="@dimen/space_16"
+                    android:stateListAnimator="@animator/press_scale_xy">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <FrameLayout
+                            android:layout_width="30dp"
+                            android:layout_height="30dp"
+                            android:background="@drawable/bg_icon_tint_soft">
+
+                            <ImageView
+                                android:layout_width="16dp"
+                                android:layout_height="16dp"
+                                android:layout_gravity="center"
+                                android:importantForAccessibility="no"
+                                android:src="@drawable/ic_users"
+                                android:tint="@color/primary_cyan_dark" />
+                        </FrameLayout>
+
+                        <TextView
+                            android:id="@+id/today_patients_title"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:layout_weight="1"
+                            android:text="@string/ui_patients"
+                            android:textAlignment="viewStart"
+                            android:textColor="@color/text_primary"
+                            android:textDirection="rtl"
+                            android:textSize="15.5sp"
+                            android:textStyle="bold" />
+
+                        <ImageView
+                            style="@style/Settings.RowChevron"
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            android:layout_marginStart="@dimen/space_4" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/today_patients_list"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_8"
+                        android:orientation="vertical" />
+                </LinearLayout>
+
+                <!-- Quick access -->
+                <TextView
+                    style="@style/Phizyo.HomeSection"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/ui_quick_access" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="0dp"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/btn_patients"
+                        style="@style/Phizyo.HomeTile"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:drawableStart="@drawable/ic_users"
+                        android:text="@string/ui_patients" />
+
+                    <Space android:layout_width="10dp" android:layout_height="match_parent" />
+
+                    <TextView
+                        android:id="@+id/btn_schedule"
+                        style="@style/Phizyo.HomeTile"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:drawableStart="@drawable/ic_calendar"
+                        android:text="@string/ui_schedule" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/btn_my_cases"
+                        style="@style/Phizyo.HomeTile"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:drawableStart="@drawable/ic_folder"
+                        android:text="@string/ui_my_cases" />
+
+                    <Space android:layout_width="10dp" android:layout_height="match_parent" />
+
+                    <TextView
+                        android:id="@+id/btn_treatment_programs"
+                        style="@style/Phizyo.HomeTile"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:drawableStart="@drawable/ic_clipboard"
+                        android:text="@string/ui_treatment_programs" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/btn_favorites"
+                        style="@style/Phizyo.HomeTile"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:drawableStart="@drawable/ic_star_stroke"
+                        android:text="@string/ui_favorites" />
+
+                    <Space android:layout_width="10dp" android:layout_height="match_parent" />
+
+                    <TextView
+                        android:id="@+id/btn_pdf_reader"
+                        style="@style/Phizyo.HomeTile"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:drawableStart="@drawable/ic_pdf"
+                        android:text="@string/ui_pdf_reader" />
+
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/btn_user_guide"
+                    style="@style/Phizyo.HomeTile"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:drawableStart="@drawable/ic_manual"
+                    android:text="@string/ui_user_guide" />
+
+                <LinearLayout
+                    android:id="@+id/recent_searches_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        style="@style/Phizyo.HomeSection"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/ui_recent_searches" />
+
+                    <HorizontalScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:scrollbars="none">
+
+                        <LinearLayout
+                            android:id="@+id/recent_searches_row"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal" />
+                    </HorizontalScrollView>
+                </LinearLayout>
+
+                <TextView
+                    style="@style/Phizyo.HomeSection"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/ui_try_searching" />
+
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clipToPadding="false"
+                    android:scrollbars="none">
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/chip_suggestion_1"
+                            style="@style/Phizyo.Chip"
+                            android:layout_marginEnd="@dimen/space_8"
+                            android:text="@string/ui_ex_sciatica" />
+
+                        <TextView
+                            android:id="@+id/chip_suggestion_2"
+                            style="@style/Phizyo.Chip"
+                            android:layout_marginEnd="@dimen/space_8"
+                            android:text="@string/ui_ex_frozen_shoulder" />
+
+                        <TextView
+                            android:id="@+id/chip_suggestion_3"
+                            style="@style/Phizyo.Chip"
+                            android:layout_marginEnd="@dimen/space_8"
+                            android:text="@string/ui_ex_carpal_tunnel" />
+
+                        <TextView
+                            android:id="@+id/chip_suggestion_4"
+                            style="@style/Phizyo.Chip"
+                            android:text="@string/ui_ex_low_back" />
+                    </LinearLayout>
+                </HorizontalScrollView>
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- Results state / direct assistant reply -->
+        <LinearLayout
+            android:id="@+id/results_container"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/result_note"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:drawablePadding="@dimen/space_8"
+                android:gravity="center_vertical"
+                android:paddingStart="20dp"
+                android:paddingTop="@dimen/space_8"
+                android:paddingEnd="20dp"
+                android:paddingBottom="10dp"
+                android:textAlignment="viewStart"
+                android:textColor="@color/accent_green"
+                android:textDirection="rtl"
+                android:textSize="13.5sp"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/suggestion_note"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="@dimen/space_8"
+                android:background="@drawable/bg_glass_chip"
+                android:clickable="true"
+                android:drawableStart="@drawable/ic_bulb"
+                android:drawablePadding="@dimen/space_8"
+                android:drawableTint="@color/accent_gold"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:paddingStart="@dimen/space_16"
+                android:paddingTop="9dp"
+                android:paddingEnd="@dimen/space_16"
+                android:paddingBottom="9dp"
+                android:textColor="@color/text_primary"
+                android:textDirection="rtl"
+                android:textSize="13.5sp"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/btn_ask_ai_fallback"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="@dimen/space_8"
+                android:background="@drawable/bg_chip_accent"
+                android:clickable="true"
+                android:drawableStart="@drawable/ic_sparkle"
+                android:drawablePadding="@dimen/space_8"
+                android:drawableTint="@color/white"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:minHeight="44dp"
+                android:paddingStart="18dp"
+                android:paddingEnd="20dp"
+                android:text="@string/ui_ask_semo_instead"
+                android:textColor="@color/white"
+                android:textDirection="rtl"
+                android:textSize="14sp"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/ai_inline_loading"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="20dp"
+                android:visibility="gone">
+
+                <ProgressBar
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:indeterminateTint="@color/claude_orange" />
+
+                <TextView
+                    android:id="@+id/ai_inline_loading_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:text="@string/ui_semo_thinking"
+                    android:textColor="@color/text_secondary"
+                    android:textDirection="rtl"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <ScrollView
+                android:id="@+id/ai_inline_answer_scroll"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingStart="20dp"
+                    android:paddingTop="@dimen/space_8"
+                    android:paddingEnd="20dp"
+                    android:paddingBottom="@dimen/space_16">
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/space_12"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/ic_sparkle"
+                            android:tint="@color/claude_orange" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="@dimen/space_8"
+                            android:text="@string/ui_semo_reply"
+                            android:textColor="@color/text_secondary"
+                            android:textDirection="rtl"
+                            android:textSize="13.5sp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/ai_inline_answer_text"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:lineSpacingExtra="6dp"
+                        android:textAlignment="viewStart"
+                        android:textColor="@color/text_primary"
+                        android:textDirection="rtl"
+                        android:textIsSelectable="true"
+                        android:textSize="16sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/ai_inline_open_chat"
+                            style="@style/Phizyo.NavChip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="0dp"
+                            android:layout_marginEnd="@dimen/space_8"
+                            android:drawableStart="@drawable/ic_message_circle"
+                            android:text="@string/ui_continue_chat" />
+
+                        <TextView
+                            android:id="@+id/ai_inline_save_case"
+                            style="@style/Phizyo.NavChip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:drawableStart="@drawable/ic_bookmark"
+                            android:text="@string/ui_save_as_case" />
+                    </LinearLayout>
+                </LinearLayout>
+            </ScrollView>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/results_list"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:clipToPadding="false"
+                android:paddingStart="14dp"
+                android:paddingTop="@dimen/space_4"
+                android:paddingEnd="14dp"
+                android:paddingBottom="@dimen/space_12" />
+
+        </LinearLayout>
+    </FrameLayout>
+
+    <!-- ============== Bottom dock: shortcuts + search field ============== -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_bottom_dock_modern"
+        android:elevation="0dp"
+        android:orientation="vertical"
+        android:paddingTop="0dp">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginBottom="10dp"
+            android:background="@color/glass_border_soft" />
+
+        <!-- Search bar: round "+" button + pill search field (like the Claude bar) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="@dimen/space_12"
+            android:paddingEnd="@dimen/space_12"
+            android:paddingBottom="@dimen/space_12">
+
+            <ImageButton
+                android:id="@+id/fab_add"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:layout_marginEnd="10dp"
+                android:background="@drawable/bg_add_button"
+                android:contentDescription="@string/ui_add_new_case"
+                android:padding="14dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_plus"
+                android:tint="@color/text_primary" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@drawable/bg_composer"
+                app:boxBackgroundMode="none"
+                app:endIconMode="clear_text"
+                app:endIconTint="@color/text_tertiary"
+                app:hintEnabled="false"
+                app:startIconDrawable="@drawable/ic_search"
+                app:startIconTint="@color/text_tertiary">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/search_field"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@android:color/transparent"
+                    android:hint="@string/ui_main_search_hint"
+                    android:imeOptions="actionSearch"
+                    android:inputType="text"
+                    android:minHeight="52dp"
+                    android:paddingTop="@dimen/space_12"
+                    android:paddingBottom="@dimen/space_12"
+                    android:textAlignment="viewStart"
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_tertiary"
+                    android:textDirection="rtl"
+                    android:textSize="15.5sp" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout>

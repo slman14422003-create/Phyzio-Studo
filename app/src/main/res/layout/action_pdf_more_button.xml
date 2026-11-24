@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "More" button in the same style as the round icon buttons (Phizyo.IconButton) used in other screen headers; opens popup_pdf_more_menu instead of the default Toolbar menu. -->
+<ImageButton xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/btn_pdf_more"
+    style="@style/Phizyo.IconButton"
+    android:layout_width="@dimen/touch_target_min"
+    android:layout_height="@dimen/touch_target_min"
+    android:layout_gravity="center_vertical"
+    android:contentDescription="@string/ui_more"
+    android:src="@drawable/ic_more_vert" />

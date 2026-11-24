@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Semo AI screen, redesigned in the Claude app style: simple top bar (back arrow, Semo AI title with a small star, clear button); welcome empty state (large star, serif title, suggestions as pill rows); messages (beige user bubble, assistant reply as plain text); large pill composer with the send button (up arrow) inside it; the "how it works" banner and the static "connected" indicator were removed (the explanation moved to Settings). The IDs used by AiAssistantActivity.java are documented next to each element. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_app_gradient"
+    android:orientation="vertical">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        style="@style/Phizyo.Toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        app:navigationIcon="@drawable/ic_arrow_back">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:id="@+id/toolbar_spark"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_marginEnd="8dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_sparkle"
+                android:tint="@color/claude_orange" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="serif"
+                android:text="@string/ai_assistant_name"
+                android:textColor="@color/text_primary"
+                android:textDirection="ltr"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </com.google.android.material.appbar.MaterialToolbar>
+
+    <!-- Attached-context banner (ai_patient_context_banner): shown only when the screen is opened from the "Ask Semo AI about this patient" button on a patient file, or from the "Ask the AI about this file" button in the PDF reader (v12), confirming that a context (a patient file without name or phone, or an open PDF) is attached to every question. Its text and icon change in code depending on the attached context type (see bindContextBanner). -->
+    <LinearLayout
+        android:id="@+id/ai_patient_context_banner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="18dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="18dp"
+        android:background="@drawable/bg_chip_accent_soft"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="8dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/ai_context_banner_icon"
+            android:layout_width="15dp"
+            android:layout_height="15dp"
+            android:layout_marginEnd="8dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_users"
+            android:tint="@color/claude_orange" />
+
+        <TextView
+            android:id="@+id/ai_context_banner_text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/ui_ai_patient_context"
+            android:textColor="@color/text_secondary"
+            android:textDirection="rtl"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <!-- ============== Chat area ============== -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <com.ast2012a.clinicalmaster.AmbientView
+            android:id="@+id/ai_ambient"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <!-- Message list (chat_list) -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/chat_list"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingStart="18dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="18dp"
+            android:paddingBottom="16dp" />
+
+        <!-- Empty state: shown only while the chat is empty (empty_state) -->
+        <LinearLayout
+            android:id="@+id/empty_state"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp">
+
+            <com.ast2012a.clinicalmaster.SemoOrbView
+                android:id="@+id/ai_orb"
+                android:layout_width="160dp"
+                android:layout_height="160dp" />
+
+            <TextView
+                android:id="@+id/quick_prompts_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="26dp"
+                android:fontFamily="serif"
+                android:gravity="center"
+                android:text="@string/ui_ai_welcome"
+                android:textColor="@color/text_primary"
+                android:textDirection="rtl"
+                android:textSize="26sp" />
+
+            <LinearLayout
+                android:id="@+id/quick_prompts_row"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </LinearLayout>
+
+        <!-- Thinking indicator: spinning star + stage text (typing_indicator / typing_sparkle / typing_text) -->
+        <LinearLayout
+            android:id="@+id/typing_indicator"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|start"
+            android:layout_marginStart="18dp"
+            android:layout_marginBottom="14dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/typing_sparkle"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_sparkle"
+                android:tint="@color/claude_orange" />
+
+            <TextView
+                android:id="@+id/typing_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:text="@string/ui_ai_thinking"
+                android:textColor="@color/text_secondary"
+                android:textDirection="rtl"
+                android:textSize="14sp" />
+
+            <com.ast2012a.clinicalmaster.TypingDotsView
+                android:id="@+id/typing_dots"
+                android:layout_width="34dp"
+                android:layout_height="20dp"
+                android:layout_marginStart="8dp" />
+        </LinearLayout>
+    </FrameLayout>
+
+    <!-- ============== Composer: pill field with the send button inside it ============== -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_app_gradient"
+        android:paddingStart="12dp"
+        android:paddingTop="6dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="12dp">
+
+        <!-- Layout fix: composer_glow used to be match_parent inside a FrameLayout whose height is wrap_content, so it stretched to fill the whole screen and pushed the chat and the field. Now a RelativeLayout ties the glow to the field's own bounds (alignTop/alignBottom). -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clipChildren="false"
+            android:clipToPadding="false">
+
+        <View
+            android:id="@+id/composer_glow"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_alignStart="@+id/composer"
+            android:layout_alignTop="@+id/composer"
+            android:layout_alignEnd="@+id/composer"
+            android:layout_alignBottom="@+id/composer"
+            android:alpha="0"
+            android:background="@drawable/bg_composer_glow" />
+
+        <LinearLayout
+            android:id="@+id/composer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_composer"
+            android:gravity="bottom"
+            android:minHeight="56dp"
+            android:orientation="horizontal"
+            android:paddingStart="20dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="8dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/chat_input"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_weight="1"
+                android:background="@android:color/transparent"
+                android:hint="@string/ui_ask_semo"
+                android:inputType="textMultiLine"
+                android:maxLines="5"
+                android:minHeight="42dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
+                android:textAlignment="viewStart"
+                android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_tertiary"
+                android:textDirection="rtl"
+                android:textSize="16sp" />
+
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:id="@+id/btn_send"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="8dp"
+                android:contentDescription="@string/ui_send"
+                android:src="@drawable/ic_arrow_up"
+                android:stateListAnimator="@null"
+                app:backgroundTint="@color/primary_cyan"
+                app:borderWidth="0dp"
+                app:elevation="0dp"
+                app:fabCustomSize="40dp"
+                app:hoveredFocusedTranslationZ="0dp"
+                app:maxImageSize="20dp"
+                app:pressedTranslationZ="0dp"
+                app:rippleColor="@color/ripple_white_soft"
+                app:tint="@color/white" />
+        </LinearLayout>
+        </RelativeLayout>
+    </LinearLayout>
+</LinearLayout>

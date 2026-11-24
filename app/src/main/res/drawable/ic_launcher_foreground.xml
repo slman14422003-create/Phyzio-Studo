@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- مقدمة الأيقونة: خط نبضة بتدرّج برتقالي + نجمة Semo AI. نفس ما يرسمه SplashMarkView
+     بالحركة، لذلك تنتقل العين من الأيقونة إلى الـ splash دون قفزة بصرية.
+     كل المحتوى داخل منطقة الأمان الدائرية (قطر 66dp من 108dp). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- وهج خلف الخط -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M25,57 L38,57 L45,41 L55,73 L62,50 L67,57 L83,57"
+        android:strokeColor="#33D97757"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="11" />
+
+    <!-- خط النبضة -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M25,57 L38,57 L45,41 L55,73 L62,50 L67,57 L83,57"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="6.4">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:endX="83"
+                android:endY="0"
+                android:startX="25"
+                android:startY="0"
+                android:type="linear">
+                <item android:color="#FFF4A582" android:offset="0" />
+                <item android:color="#FFD97757" android:offset="1" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- نجمة Semo AI -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M72,28 L72,44 M64,36 L80,36 M67,31 L77,41 M77,31 L67,41"
+        android:strokeColor="#FFFFE6D8"
+        android:strokeLineCap="round"
+        android:strokeWidth="3.2" />
+</vector>
